@@ -8,82 +8,51 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <div id="layout-container">
+    <div id="login-overlay" style="position: fixed; inset: 0; background: #0f172a; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; color: white;">
+      <h1 style="margin-bottom: 0.5rem; font-size: 2.5rem;">Py3D Visualizer</h1>
+      <p style="margin-bottom: 2rem; color: #94a3b8;">IITM BS Students Only</p>
+      <button id="btn-login" style="background: #2563eb; color: white; border: none; padding: 1rem 2rem; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+        Sign in with Google
+      </button>
+      <p id="login-error" style="color: #ef4444; margin-top: 1rem; max-width: 400px; text-align: center; font-size: 0.9rem;"></p>
+    </div>
+
+    <div id="layout-container" style="display: none;">
       <div id="canvas-container">
         <canvas id="app-canvas"></canvas>
       </div>
 
       <div id="ui-sidebar">
         <div class="header">
-          <h1>Algorithm Visualizer</h1>
+          <h1>Py3D Visualizer</h1>
           
-          <div class="problem-selector" style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-            <button id="btn-mode-eq" class="mode-btn active">Equation</button>
-            <button id="btn-mode-div" class="mode-btn">Divide</button>
-            <button id="btn-mode-poly" class="mode-btn">Polynomial</button>
-            <button id="btn-mode-todo" class="mode-btn">Todo</button>
-            <button id="btn-mode-barchart" class="mode-btn">Bar Chart</button>
+          <div class="problem-selector" style="display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center;">
+            <label for="question-select" style="font-weight: 600;">Question:</label>
+            <select id="question-select" style="flex: 1; padding: 0.5rem; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white;">
+              <!-- Options populated dynamically -->
+            </select>
           </div>
-
-          <div id="input-group-eq" class="input-group">
-            <input type="text" id="eq-input" placeholder="e.g. 3x - 5 = 10" value="2x + 4 = 10" />
-            <button id="btn-generate-eq">Visualize</button>
-          </div>
-          
-          <div id="input-group-div" class="input-group" style="display: none;">
-            <input type="number" id="n-input" placeholder="n (Total)" value="10" />
-            <input type="number" id="k-input" placeholder="k (Parts)" value="3" />
-            <button id="btn-generate-div">Visualize</button>
-          </div>
-          
-          <div id="input-group-poly" class="input-group" style="display: none;">
-            <input type="text" id="poly-input" placeholder="e.g. 2, 3, 5, 7" value="2, 3, 5, 7" />
-            <input type="number" id="x-input" placeholder="x" value="2" />
-            <button id="btn-generate-poly">Visualize</button>
-          </div>
-          
-          <div id="input-group-todo" class="input-group" style="display: none; flex-direction: column;">
-            <input type="text" id="todo-indices" placeholder="Indices e.g. 0, 2" value="0, 2" style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); color: white; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 0.5rem;"/>
-            <textarea id="todo-items" placeholder="Items separated by commas" rows="3" style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); color: white; padding: 0.75rem 1rem; border-radius: 6px; font-family: monospace; resize: vertical; margin-bottom: 0.5rem;">Buy milk, Walk dog, Write code</textarea>
-            <button id="btn-generate-todo" style="background: #2563eb; color: white; border: none; border-radius: 6px; padding: 0.75rem; font-weight: 600; cursor: pointer;">Visualize</button>
-          </div>
-          
-          <div id="input-group-barchart" class="input-group" style="display: none; flex-direction: column;">
-            <textarea id="barchart-data" placeholder="Input string (e.g. 3\nApple:5\nBanana:2\nCherry:7)" rows="5" style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); color: white; padding: 0.75rem 1rem; border-radius: 6px; font-family: monospace; resize: vertical; margin-bottom: 0.5rem;">3
-Apple:5
-Banana:2
-Cherry:7</textarea>
-            <button id="btn-generate-barchart" style="background: #2563eb; color: white; border: none; border-radius: 6px; padding: 0.75rem; font-weight: 600; cursor: pointer;">Visualize</button>
-          </div>
-          
           <div id="error-msg" class="error-text"></div>
         </div>
 
-        <div class="controls-panel">
+        <div class="controls-panel" style="flex: 1; display: flex; flex-direction: column;">
           <div class="step-info">
-            <h2 id="step-title">Step 0</h2>
-            <p id="step-desc">Description of the step...</p>
+            <h2 id="question-title">Question Title</h2>
+            <p id="question-desc" style="white-space: pre-wrap;">Question description...</p>
           </div>
           
-          <div class="code-container" id="code-container">
+          <div class="code-container" style="flex: 1; display: flex; flex-direction: column; min-height: 250px;">
             <div class="code-header">
-              <span>Python Implementation</span>
-              <button id="btn-fullscreen" title="Toggle Fullscreen">⛶</button>
+              <span>Python Editor</span>
             </div>
-            <div class="code-content" id="code-content-box">
-              <pre><code id="step-code">def solve_for_x(equation):
-    pass</code></pre>
+            <div id="editor-container" style="flex: 1; background: #1e1e1e; overflow: hidden; border-radius: 0 0 8px 8px;">
+              <!-- CodeMirror injected here -->
             </div>
-          </div>
-          
-          <div class="buttons">
-            <button id="btn-prev" disabled>Previous</button>
-            <button id="btn-implement" class="primary">Implement Code</button>
-            <button id="btn-next" disabled>Next Step</button>
           </div>
           
           <div class="buttons" style="margin-top: 1rem;">
-            <button id="btn-reset" class="reset">Restart Process</button>
+            <button id="btn-run" class="primary" style="flex: 1;">Run Code</button>
+            <button id="btn-reset" class="reset">Reset Scene</button>
           </div>
         </div>
       </div>
