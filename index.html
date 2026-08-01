@@ -4,19 +4,411 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>3D Equation Solver Visualization</title>
+    <title>ProViz - Interactive 3D Math & Python Visualizer</title>
+    <meta name="description" content="Real-time 3D equation solver, vector space visualizer, and Python algorithm playground built for students and educators." />
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <div id="login-overlay" style="position: fixed; inset: 0; background: #0f172a; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; color: white;">
-      <h1 style="margin-bottom: 0.5rem; font-size: 2.5rem;">Py3D Visualizer</h1>
-      <p style="margin-bottom: 2rem; color: #94a3b8;">IITM BS Students Only</p>
-      <button id="btn-login" style="background: #2563eb; color: white; border: none; padding: 1rem 2rem; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
-        Sign in with Google
-      </button>
-      <p id="login-error" style="color: #ef4444; margin-top: 1rem; max-width: 400px; text-align: center; font-size: 0.9rem;"></p>
+
+    <!-- LANDING PAGE VIEW -->
+    <div id="landing-page">
+      
+      <!-- Sticky Navigation Header -->
+      <nav id="landing-navbar">
+        <a href="#" class="nav-brand">
+          <div class="logo-box">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+          </div>
+          <span>ProViz</span>
+        </a>
+
+        <ul class="nav-links">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#demo">Live Demo</a></li>
+          <li><a href="#curriculum">Curriculum</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+
+        <div class="nav-actions">
+          <button class="btn btn-outline btn-launch-app">Sign In</button>
+          <button class="btn btn-primary btn-launch-app">Launch App 🚀</button>
+        </div>
+      </nav>
+
+      <!-- Hero Section -->
+      <section class="hero-section" id="hero">
+        <div class="hero-content">
+          <div class="hero-badge">
+            <span>✨ Designed for IITM BS & Python Math</span>
+          </div>
+
+          <h1 class="hero-title">
+            Visualize Python Code & <span class="text-gradient">3D Math</span> in Real-Time
+          </h1>
+
+          <p class="hero-subtitle">
+            An interactive 3D equation solver, vector space visualizer, and algorithm simulator. Execute Python client-side with Pyodide and watch concepts come alive.
+          </p>
+
+          <div class="hero-ctas">
+            <button class="btn btn-glow btn-lg btn-launch-app">
+              <span>Launch 3D Playground</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+            <a href="#demo" class="btn btn-outline btn-lg">
+              <span>Try Live Demo</span>
+            </a>
+          </div>
+
+          <div class="hero-metrics">
+            <div class="metric-item">
+              <span class="metric-number text-gradient">100%</span>
+              <span class="metric-label">Client-Side Pyodide</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-number">3D GSAP</span>
+              <span class="metric-label">Smooth Step Solvers</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-number">Sanity</span>
+              <span class="metric-label">Live Problem Sync</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-canvas-container">
+          <canvas id="hero-canvas"></canvas>
+          <div class="hero-canvas-badge">
+            <span class="pulse-dot"></span>
+            <span>Interactive 3D Three.js Engine</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Interactive Sandbox Section -->
+      <section class="section" id="demo">
+        <div class="section-header">
+          <span class="section-tag">Interactive Sandbox</span>
+          <h2 class="section-title">See Python & 3D Math in Action</h2>
+          <p class="section-desc">Select a algorithm or math topic below to preview live Python code and its corresponding 3D spatial animation.</p>
+        </div>
+
+        <div class="sandbox-wrapper">
+          <div class="sandbox-tabs">
+            <button class="sandbox-tab-btn active" data-preset="array">3D Array Mutation</button>
+            <button class="sandbox-tab-btn" data-preset="vector">3D Vector Addition</button>
+            <button class="sandbox-tab-btn" data-preset="matrix">3D Matrix Transform</button>
+          </div>
+
+          <div class="sandbox-grid">
+            <div class="sandbox-code-box">
+              <div class="sandbox-code-header">
+                <div class="dots">
+                  <div class="dot dot-red"></div>
+                  <div class="dot dot-yellow"></div>
+                  <div class="dot dot-green"></div>
+                </div>
+                <span>main.py (Python 3.11)</span>
+              </div>
+              <div id="sandbox-code-preview" class="sandbox-code-content"></div>
+            </div>
+
+            <div class="sandbox-visual-box">
+              <canvas id="sandbox-canvas"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Features Section -->
+      <section class="section" id="features">
+        <div class="section-header">
+          <span class="section-tag">Core Features</span>
+          <h2 class="section-title">Everything You Need for 3D Visual Learning</h2>
+          <p class="section-desc">Built from the ground up for computer science, mathematics, and physics students.</p>
+        </div>
+
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            </div>
+            <h3 class="feature-title">WebAssembly Pyodide Engine</h3>
+            <p class="feature-desc">Run Python standard library directly in your browser with instant feedback and zero setup required.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            </div>
+            <h3 class="feature-title">Step-by-Step GSAP Animations</h3>
+            <p class="feature-desc">Watch arrays swap elements, vectors transform, and equations resolve step-by-step with smooth 3D animations.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>
+            </div>
+            <h3 class="feature-title">CodeMirror 6 Editor</h3>
+            <p class="feature-desc">Professional code editing experience complete with Python syntax highlighting, error hints, and full-screen view.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            </div>
+            <h3 class="feature-title">Sanity CMS Problem Sync</h3>
+            <p class="feature-desc">Dynamic sync of curated coursework problems directly from Sanity CMS with fallback questions included.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <h3 class="feature-title">Firebase Google Auth</h3>
+            <p class="feature-desc">Seamless and secure single sign-on tailored for university student accounts and educators.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            </div>
+            <h3 class="feature-title">Three.js Orbit Controls</h3>
+            <p class="feature-desc">Full 360-degree rotation, pan, zoom, and camera view controls for inspecting 3D objects in space.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Curriculum Showcase Section -->
+      <section class="section" id="curriculum">
+        <div class="section-header">
+          <span class="section-tag">Curriculum Topics</span>
+          <h2 class="section-title">Supported Subjects & Courses</h2>
+          <p class="section-desc">Tailored topics designed to accelerate understanding in core CS & Math courses.</p>
+        </div>
+
+        <div class="curriculum-grid">
+          <div class="topic-card">
+            <span class="topic-badge">Mathematics</span>
+            <h3 class="topic-title">Linear Algebra</h3>
+            <p class="section-desc">Visualize vector spaces, dot/cross products, matrix transformations, and eigenvalues in 3D space.</p>
+            <ul class="topic-items">
+              <li>Vector Addition & Scaling</li>
+              <li>Matrix Linear Maps</li>
+              <li>3D Coordinate Systems</li>
+            </ul>
+          </div>
+
+          <div class="topic-card">
+            <span class="topic-badge">Data Structures</span>
+            <h3 class="topic-title">Arrays & Matrices</h3>
+            <p class="section-desc">Step through array element access, sorting algorithms, matrix operations, and memory layouts.</p>
+            <ul class="topic-items">
+              <li>Element Pointer Shifts</li>
+              <li>Two-Pointer Algorithms</li>
+              <li>2D/3D Grid Traversals</li>
+            </ul>
+          </div>
+
+          <div class="topic-card">
+            <span class="topic-badge">Calculus</span>
+            <h3 class="topic-title">3D Multivariable Calculus</h3>
+            <p class="section-desc">Plot surface functions, partial derivatives, gradient vectors, and parametric curves dynamically.</p>
+            <ul class="topic-items">
+              <li>Gradient Vector Fields</li>
+              <li>3D Quadric Surfaces</li>
+              <li>Parametric Trajectories</li>
+            </ul>
+          </div>
+
+          <div class="topic-card">
+            <span class="topic-badge">Physics & CS</span>
+            <h3 class="topic-title">Computational Physics</h3>
+            <p class="section-desc">Simulate kinematics, particle trajectories, force fields, and numerical differential equations.</p>
+            <ul class="topic-items">
+              <li>Euler & RK4 Integrators</li>
+              <li>Particle Swarm Motion</li>
+              <li>Gravitational Attractors</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Testimonials Section -->
+      <section class="section" id="testimonials">
+        <div class="section-header">
+          <span class="section-tag">Student Feedback</span>
+          <h2 class="section-title">Loved by Students & TAs</h2>
+          <p class="section-desc">Here is what students learning Python and 3D Mathematics have to say.</p>
+        </div>
+
+        <div class="testimonials-grid">
+          <div class="testimonial-card">
+            <div class="stars">★★★★★</div>
+            <p class="testimonial-text">"ProViz made understanding matrix transformations so intuitive! Seeing the 3D grid shift in real-time while editing Python code was a game changer."</p>
+            <div class="user-info">
+              <div class="user-avatar">AR</div>
+              <div class="user-details">
+                <h4>Aditya R.</h4>
+                <p>IITM BS Data Science Student</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="testimonial-card">
+            <div class="stars">★★★★★</div>
+            <p class="testimonial-text">"The client-side Pyodide execution means no delays or server waiting. I can test my Python solutions and see step-by-step animations instantly."</p>
+            <div class="user-info">
+              <div class="user-avatar">PS</div>
+              <div class="user-details">
+                <h4>Priya S.</h4>
+                <p>Python Programming TA</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="testimonial-card">
+            <div class="stars">★★★★★</div>
+            <p class="testimonial-text">"Combining Three.js with CodeMirror Python editor makes learning math feel like playing a video game. Highly recommended!"</p>
+            <div class="user-info">
+              <div class="user-avatar">VK</div>
+              <div class="user-details">
+                <h4>Vikram K.</h4>
+                <p>CS Undergrad</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ Section -->
+      <section class="section" id="faq">
+        <div class="section-header">
+          <span class="section-tag">FAQ</span>
+          <h2 class="section-title">Frequently Asked Questions</h2>
+        </div>
+
+        <div class="faq-container">
+          <div class="faq-item active">
+            <div class="faq-question">
+              <span>What is ProViz?</span>
+              <span class="faq-icon">▼</span>
+            </div>
+            <div class="faq-answer">
+              <p>ProViz is an interactive 3D web platform that visualizes Python code execution, array modifications, vector mathematics, and equations step-by-step using Three.js and Pyodide WebAssembly.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              <span>Do I need to install Python locally?</span>
+              <span class="faq-icon">▼</span>
+            </div>
+            <div class="faq-answer">
+              <p>No! ProViz uses Pyodide, which runs full Python 3 inside your browser client-side using WebAssembly technology.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              <span>Who can log in to ProViz?</span>
+              <span class="faq-icon">▼</span>
+            </div>
+            <div class="faq-answer">
+              <p>Students and educators can log in using Google Sign-In with their university or personal email addresses.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              <span>Is ProViz free to use?</span>
+              <span class="faq-icon">▼</span>
+            </div>
+            <div class="faq-answer">
+              <p>Yes, ProViz is 100% free for students, TAs, and learners interested in 3D Python math visualization.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer>
+        <div class="footer-container">
+          <div class="footer-brand">
+            <a href="#" class="nav-brand">
+              <div class="logo-box">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+              </div>
+              <span>ProViz</span>
+            </a>
+            <p>Empowering students to master Python programming, 3D linear algebra, and data structure algorithms visually.</p>
+          </div>
+
+          <div class="footer-col">
+            <h4>Platform</h4>
+            <ul class="footer-links">
+              <li><a href="#features">Features</a></li>
+              <li><a href="#demo">Live Demo</a></li>
+              <li><a href="#curriculum">Curriculum</a></li>
+              <li><a href="#" class="btn-launch-app">Launch App</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-col">
+            <h4>Resources</h4>
+            <ul class="footer-links">
+              <li><a href="https://pyodide.org/" target="_blank">Pyodide Docs</a></li>
+              <li><a href="https://threejs.org/" target="_blank">Three.js Docs</a></li>
+              <li><a href="https://codemirror.net/" target="_blank">CodeMirror 6</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-col">
+            <h4>Status</h4>
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: #10b981; font-weight: 600; font-size: 0.9rem;">
+              <span class="pulse-dot"></span>
+              <span>Visualizer Online</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer-bottom">
+          <p>&copy; 2026 ProViz. All rights reserved.</p>
+          <p>Built with Three.js, Pyodide, and GSAP</p>
+        </div>
+      </footer>
+
     </div>
 
+    <!-- LOGIN MODAL OVERLAY -->
+    <div id="login-overlay" style="display: none;">
+      <div class="login-card">
+        <button class="btn-close-modal btn-back-home" title="Close">&times;</button>
+        <div class="logo-box" style="margin: 0 auto 1.5rem auto; width: 48px; height: 48px;">
+          <svg viewBox="0 0 24 24" style="width: 28px; height: 28px;">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <h2 style="margin-bottom: 0.5rem; font-size: 2rem;">Sign In to ProViz</h2>
+        <p style="margin-bottom: 2rem; color: #94a3b8; font-size: 0.95rem;">IITM BS & University Account Authentication</p>
+        
+        <button id="btn-login" style="background: var(--gradient-button); color: white; border: none; padding: 0.9rem 1.5rem; border-radius: 10px; font-size: 1.05rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.75rem; width: 100%; box-shadow: 0 4px 20px rgba(37,99,235,0.4);">
+          <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#fff" d="M21.35 11.1h-9.17v2.73h5.51c-.24 1.27-.95 2.34-2.03 3.06v2.54h3.29c1.92-1.77 3.03-4.38 3.03-7.46 0-.71-.06-1.4-.17-2.07z"/><path fill="#fff" d="M12.18 21c2.75 0 5.06-.91 6.75-2.47l-3.29-2.54c-.91.61-2.07.97-3.46.97-2.66 0-4.91-1.79-5.71-4.21H3.07v2.62C4.77 18.73 8.19 21 12.18 21z"/><path fill="#fff" d="M6.47 12.75c-.2-.61-.31-1.26-.31-1.95s.11-1.34.31-1.95V6.23H3.07C2.39 7.59 2 9.12 2 10.8s.39 3.21 1.07 4.57l3.4-2.62z"/><path fill="#fff" d="M12.18 4.75c1.49 0 2.84.51 3.9 1.51l2.92-2.92C17.23 1.68 14.93 1 12.18 1 8.19 1 4.77 3.27 3.07 6.23l3.4 2.62c.8-2.42 3.05-4.1 5.71-4.1z"/></svg>
+          Sign in with Google
+        </button>
+        <p id="login-error" style="color: #ef4444; margin-top: 1rem; font-size: 0.9rem; min-height: 1.2rem;"></p>
+
+        <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color);">
+          <button class="btn-back-home" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.9rem;">← Back to Landing Page</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- APP WORKSPACE LAYOUT CONTAINER -->
     <div id="layout-container" style="display: none;">
       <div id="canvas-container">
         <canvas id="app-canvas"></canvas>
@@ -24,7 +416,12 @@
 
       <div id="ui-sidebar">
         <div class="header">
-          <h1>Py3D Visualizer</h1>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <h1>Py3D Visualizer</h1>
+            <button class="btn-back-home" title="Home Landing Page" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); color: white; padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.8rem; cursor: pointer;">
+              🏠 Home
+            </button>
+          </div>
           
           <div class="problem-selector" style="display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center;">
             <label for="question-select" style="font-weight: 600;">Question:</label>
