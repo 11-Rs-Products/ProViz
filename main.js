@@ -7,7 +7,7 @@ import { python } from '@codemirror/lang-python';
 import { VisualizerAPI } from './src/VisualizerAPI.js';
 import { CodeRunner } from './src/CodeRunner.js';
 import { questions as fallbackQuestions } from './src/questions.js';
-import { loginWithGoogle } from './src/firebase.js';
+import { loginWithGoogle, onAuthChange } from './src/firebase.js';
 import { fetchQuestions, saveUserEmail } from './src/sanity.js';
 
 // --- Scene Setup ---
@@ -70,13 +70,24 @@ const btnLogin = document.getElementById('btn-login');
 const loginError = document.getElementById('login-error');
 
 // Auth Flow
-btnLogin.addEventListener('click', async () => {
-    loginError.innerText = "";
-    btnLogin.innerText = "Signing in...";
-    btnLogin.disabled = true;
+let isAppInitialized = false;
+let lastAuthError = null;
+
+onAuthChange(async (user, error) => {
+    if (error) {
+        console.error(error);
+        lastAuthError = error.message;
+        loginError.innerText = error.message;
+        btnLogin.innerText = "Sign in with Google";
+        btnLogin.disabled = false;
+        return;
+    }
     
-    try {
-        const user = await loginWithGoogle();
+    if (user && !isAppInitialized) {
+        isAppInitialized = true;
+        loginError.innerText = "";
+        lastAuthError = null;
+        
         // Save to Sanity
         await saveUserEmail(user.email);
         
@@ -86,6 +97,28 @@ btnLogin.addEventListener('click', async () => {
         
         // Initialize App
         await initApp();
+    } else if (!user) {
+        // Not logged in
+        loginOverlay.style.display = 'flex';
+        layoutContainer.style.display = 'none';
+        btnLogin.innerText = "Sign in with Google";
+        btnLogin.disabled = false;
+        
+        // Preserve the error message if we just kicked them out
+        if (lastAuthError) {
+            loginError.innerText = lastAuthError;
+        }
+    }
+});
+
+btnLogin.addEventListener('click', async () => {
+    loginError.innerText = "";
+    lastAuthError = null;
+    btnLogin.innerText = "Redirecting...";
+    btnLogin.disabled = true;
+    
+    try {
+        await loginWithGoogle();
     } catch (error) {
         console.error(error);
         loginError.innerText = error.message;
