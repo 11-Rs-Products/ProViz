@@ -9,6 +9,7 @@ import { CodeRunner } from './src/CodeRunner.js';
 import { questions as fallbackQuestions } from './src/questions.js';
 import { loginWithGoogle } from './src/firebase.js';
 import { fetchQuestions, saveUserEmail } from './src/sanity.js';
+import { initLandingPage } from './src/landing.js';
 
 // --- Scene Setup ---
 const canvas = document.querySelector('#app-canvas');
@@ -16,8 +17,8 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color('#0f172a'); // Slate 900
 
 const canvasContainer = document.getElementById('canvas-container');
-const width = canvasContainer.clientWidth;
-const height = canvasContainer.clientHeight;
+const width = canvasContainer ? canvasContainer.clientWidth : window.innerWidth;
+const height = canvasContainer ? canvasContainer.clientHeight : window.innerHeight;
 
 const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
 camera.position.set(0, 0, 16);
@@ -48,13 +49,13 @@ function animate() {
 animate();
 
 // --- Initialization ---
-
 const vAPI = new VisualizerAPI(scene, camera, group);
 const codeRunner = new CodeRunner(vAPI);
 
 let editor;
 let currentQuestion = null;
 let activeQuestions = [];
+let isAppInitialized = false;
 
 const selectEl = document.getElementById('question-select');
 const titleEl = document.getElementById('question-title');
@@ -63,11 +64,19 @@ const errorMsg = document.getElementById('error-msg');
 const btnRun = document.getElementById('btn-run');
 const btnReset = document.getElementById('btn-reset');
 
-// Login Elements
+// Elements
+const landingPage = document.getElementById('landing-page');
 const loginOverlay = document.getElementById('login-overlay');
 const layoutContainer = document.getElementById('layout-container');
 const btnLogin = document.getElementById('btn-login');
 const loginError = document.getElementById('login-error');
+
+// --- 1. Init Landing Page ---
+initLandingPage(() => {
+    // When "Launch App" or "Sign In" is clicked from landing page:
+    landingPage.style.display = 'none';
+    loginOverlay.style.display = 'flex';
+});
 
 // Auth Flow
 btnLogin.addEventListener('click', async () => {
@@ -84,8 +93,14 @@ btnLogin.addEventListener('click', async () => {
         loginOverlay.style.display = 'none';
         layoutContainer.style.display = 'flex';
         
-        // Initialize App
-        await initApp();
+        // Initialize App if not already done
+        if (!isAppInitialized) {
+            await initApp();
+            isAppInitialized = true;
+        }
+
+        // Trigger resize calculation
+        setTimeout(handleResize, 100);
     } catch (error) {
         console.error(error);
         loginError.innerText = error.message;
@@ -94,11 +109,22 @@ btnLogin.addEventListener('click', async () => {
     }
 });
 
+function handleResize() {
+    if (!canvasContainer) return;
+    const w = canvasContainer.clientWidth || window.innerWidth;
+    const h = canvasContainer.clientHeight || window.innerHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+}
+
+window.addEventListener('resize', handleResize);
+
 async function initApp() {
     // Fetch Questions from Sanity
     activeQuestions = await fetchQuestions();
     
-    if (activeQuestions.length === 0) {
+    if (!activeQuestions || activeQuestions.length === 0) {
         console.log("Using local fallback questions.");
         activeQuestions = fallbackQuestions;
     }
@@ -113,13 +139,15 @@ async function initApp() {
     });
 
     // Init Editor
-    editor = new EditorView({
-        state: EditorState.create({
-            doc: "",
-            extensions: [basicSetup, python()]
-        }),
-        parent: document.getElementById('editor-container')
-    });
+    if (!editor) {
+        editor = new EditorView({
+            state: EditorState.create({
+                doc: "",
+                extensions: [basicSetup, python()]
+            }),
+            parent: document.getElementById('editor-container')
+        });
+    }
 
     selectEl.addEventListener('change', () => {
         loadQuestion(activeQuestions[selectEl.value]);
