@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "firebase/auth";
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -16,6 +16,10 @@ try {
     if (firebaseConfig.apiKey) {
         app = initializeApp(firebaseConfig);
         auth = getAuth(app);
+        
+        // Force localStorage instead of IndexedDB to avoid "Database is closing" lock errors
+        setPersistence(auth, browserLocalPersistence).catch(console.error);
+        
         googleProvider = new GoogleAuthProvider();
     }
 } catch (e) {
@@ -42,7 +46,7 @@ export async function loginWithGoogle() {
     if (!auth) throw new Error("Firebase is not configured. Check .env variables.");
     
     try {
-        await signInWithRedirect(auth, googleProvider);
+        await signInWithPopup(auth, googleProvider);
     } catch (error) {
         throw error;
     }
@@ -51,21 +55,6 @@ export async function loginWithGoogle() {
 export function onAuthChange(callback) {
     if (!auth) return;
     
-    // First, check if there's a redirect result (e.g. just came back from Google)
-    getRedirectResult(auth).then((result) => {
-        if (result && result.user) {
-            const user = result.user;
-            if (!isAllowedEmail(user.email)) {
-                signOut(auth).then(() => {
-                    callback(null, new Error(`Access denied. ${user.email} is not a valid IITM BS email.`));
-                });
-                return;
-            }
-        }
-    }).catch((error) => {
-        callback(null, error);
-    });
-
     // Listen for general auth state changes
     onAuthStateChanged(auth, async (user) => {
         if (user) {

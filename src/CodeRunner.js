@@ -1,4 +1,3 @@
-import { loadPyodide } from 'pyodide';
 
 export class CodeRunner {
     constructor(visualizerAPI) {
@@ -11,7 +10,7 @@ export class CodeRunner {
         if (this.isReady) return;
         
         console.log("Loading Pyodide...");
-        this.pyodide = await loadPyodide({
+        this.pyodide = await window.loadPyodide({
             indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/"
         });
         

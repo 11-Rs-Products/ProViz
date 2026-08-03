@@ -3,13 +3,14 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { EditorState } from '@codemirror/state';
 import { EditorView, basicSetup } from 'codemirror';
 import { python } from '@codemirror/lang-python';
+import { signOut } from 'firebase/auth';
 
 import { VisualizerAPI } from './src/VisualizerAPI.js';
 import { CodeRunner } from './src/CodeRunner.js';
 import { questions as fallbackQuestions } from './src/questions.js';
-import { loginWithGoogle, onAuthChange } from './src/firebase.js';
-import { fetchQuestions, saveUserEmail } from './src/sanity.js';
 import { initLandingPage } from './src/landing.js';
+import { onAuthChange, loginWithGoogle, logoutUser } from './src/firebase.js';
+import { fetchQuestions, saveUserEmail } from './src/sanity.js';
 
 // --- Scene Setup ---
 const canvas = document.querySelector('#app-canvas');
@@ -56,6 +57,7 @@ let editor;
 let currentQuestion = null;
 let activeQuestions = [];
 let isAppInitialized = false;
+let currentUser = null;
 
 const selectEl = document.getElementById('question-select');
 const titleEl = document.getElementById('question-title');
@@ -75,7 +77,13 @@ const loginError = document.getElementById('login-error');
 initLandingPage(() => {
     // When "Launch App" or "Sign In" is clicked from landing page:
     landingPage.style.display = 'none';
-    loginOverlay.style.display = 'flex';
+    if (currentUser) {
+        loginOverlay.style.display = 'none';
+        layoutContainer.style.display = 'flex';
+    } else {
+        loginOverlay.style.display = 'flex';
+        layoutContainer.style.display = 'none';
+    }
 });
 
 // Auth Flow
@@ -91,15 +99,28 @@ onAuthChange(async (user, error) => {
         return;
     }
     
+    currentUser = user;
+    const navBtnAuth = document.getElementById('nav-btn-auth');
+    
     if (user && !isAppInitialized) {
         isAppInitialized = true;
         loginError.innerText = "";
         lastAuthError = null;
         
+        if (navBtnAuth) {
+            navBtnAuth.innerText = "Log Out";
+            navBtnAuth.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                logoutUser().then(() => window.location.reload());
+            };
+        }
+        
         // Save to Sanity
         await saveUserEmail(user.email);
         
-        // Hide login, show app
+        // Hide landing page and login, show app
+        landingPage.style.display = 'none';
         loginOverlay.style.display = 'none';
         layoutContainer.style.display = 'flex';
 
@@ -110,6 +131,10 @@ onAuthChange(async (user, error) => {
         setTimeout(handleResize, 100);
     } else if (!user) {
         // Not logged in
+        if (navBtnAuth) {
+            navBtnAuth.innerText = "Sign In";
+            navBtnAuth.onclick = null; // Revert to default behavior
+        }
         loginOverlay.style.display = 'flex';
         layoutContainer.style.display = 'none';
         btnLogin.innerText = "Sign in with Google";

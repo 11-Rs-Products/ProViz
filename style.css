@@ -780,6 +780,89 @@ footer {
   cursor: pointer;
 }
 
+/* --- APP WORKSPACE STYLES --- */
+#layout-container {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--bg-dark);
+}
+
+#canvas-container {
+  flex: 1;
+  position: relative;
+  background: radial-gradient(circle at center, #0f172a, #020617);
+}
+
+#app-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#ui-sidebar {
+  width: 400px;
+  background: var(--bg-card);
+  border-left: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+  z-index: 10;
+}
+
+.problem-selector select {
+  outline: none;
+  transition: border-color 0.2s;
+}
+.problem-selector select:focus {
+  border-color: var(--accent-cyan);
+}
+
+.controls-panel {
+  overflow-y: auto;
+}
+
+.code-container {
+  margin-top: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.code-header {
+  background: rgba(255,255,255,0.05);
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+  border-radius: 8px 8px 0 0;
+}
+
+.buttons button {
+  padding: 0.75rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.buttons button.primary {
+  background: var(--accent-blue);
+  color: white;
+}
+.buttons button.primary:hover {
+  background: #3b82f6;
+}
+.buttons button.reset {
+  background: rgba(255,255,255,0.1);
+  color: white;
+  margin-left: 0.5rem;
+}
+.buttons button.reset:hover {
+  background: rgba(255,255,255,0.15);
+}
+
 /* --- Responsive Breakpoints --- */
 @media (max-width: 1024px) {
   .hero-section {
