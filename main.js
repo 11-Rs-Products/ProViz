@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { EditorState } from '@codemirror/state';
-import { EditorView, basicSetup } from 'codemirror';
+import { EditorState, StateField, StateEffect } from '@codemirror/state';
+import { EditorView, Decoration } from '@codemirror/view';
+import { basicSetup } from 'codemirror';
 import { python } from '@codemirror/lang-python';
 import { signOut } from 'firebase/auth';
 
@@ -65,6 +66,35 @@ const descEl = document.getElementById('question-desc');
 const errorMsg = document.getElementById('error-msg');
 const btnRun = document.getElementById('btn-run');
 const btnReset = document.getElementById('btn-reset');
+const btnSolution = document.getElementById('btn-solution');
+const btnFullscreen = document.getElementById('btn-fullscreen');
+const btnNext = document.getElementById('btn-next');
+
+// --- CodeMirror Stepper Highlighting ---
+const addLineHighlight = StateEffect.define();
+const lineHighlightField = StateField.define({
+    create() { return Decoration.none },
+    update(lines, tr) {
+        lines = lines.map(tr.changes)
+        for (let e of tr.effects) {
+            if (e.is(addLineHighlight)) {
+                lines = Decoration.none;
+                if (e.value > 0 && e.value <= tr.state.doc.lines) {
+                    lines = lines.update({
+                        add: [Decoration.line({class: "cm-highlightLine"}).range(tr.state.doc.line(e.value).from)]
+                    });
+                }
+            }
+        }
+        return lines;
+    },
+    provide: f => EditorView.decorations.from(f)
+});
+
+function highlightLine(lineNo) {
+    if (!editor) return;
+    editor.dispatch({ effects: addLineHighlight.of(lineNo) });
+}
 
 // Elements
 const landingPage = document.getElementById('landing-page');
@@ -197,7 +227,7 @@ async function initApp() {
         editor = new EditorView({
             state: EditorState.create({
                 doc: "",
-                extensions: [basicSetup, python()]
+                extensions: [basicSetup, python(), lineHighlightField]
             }),
             parent: document.getElementById('editor-container')
         });
@@ -223,11 +253,65 @@ async function initApp() {
         errorMsg.innerText = "Failed to load Pyodide. Check console.";
     }
 
-    // Events
     btnRun.addEventListener('click', runUserCode);
     btnReset.addEventListener('click', () => {
+        btnNext.style.display = 'none';
+        btnRun.style.display = 'block';
+        btnRun.innerText = "Run Code";
+        btnRun.disabled = false;
+        
+        document.getElementById('editor-container').style.display = 'block';
+        document.getElementById('solution-stepper').style.display = 'none';
+        document.getElementById('code-header-title').innerText = "Python Editor";
+        stepperMode = 'USER';
+        
+        highlightLine(0);
         if (currentQuestion) loadQuestion(currentQuestion);
     });
+    
+    btnNext.addEventListener('click', handleNextStep);
+
+    btnSolution.addEventListener('click', () => {
+        if (currentQuestion && currentQuestion.generateSolutionSteps) {
+            document.getElementById('editor-container').style.display = 'none';
+            document.getElementById('solution-stepper').style.display = 'flex';
+            document.getElementById('code-header-title').innerText = "Solution Walkthrough";
+            
+            btnRun.style.display = 'none';
+            btnNext.style.display = 'block';
+            btnNext.innerText = "Start Solution ➔";
+            btnNext.disabled = false;
+            
+            // Reset scene
+            if (vAPI.isPlaying) vAPI.stop();
+            currentQuestion.setupScene(vAPI);
+            vAPI.actionQueue.forEach(a => vAPI.playAction(a));
+            vAPI.actionQueue = []; // clear so we don't replay setup
+            
+            currentSolutionSteps = currentQuestion.generateSolutionSteps();
+            currentSolutionStepIdx = -1;
+            stepperMode = 'SOLUTION';
+            
+            // Initial slide text
+            document.getElementById('step-title').innerText = "Solution Simulation";
+            document.getElementById('step-desc').innerText = "Click Start Solution to walk through the steps.";
+            document.getElementById('step-code').innerText = "# Ready to begin";
+        } else {
+            errorMsg.innerText = "No solution steps available for this question.";
+        }
+    });
+
+    if (btnFullscreen) {
+        const codeContainer = document.querySelector('.code-container');
+        btnFullscreen.addEventListener('click', () => {
+            codeContainer.classList.toggle('fullscreen-editor');
+            if (codeContainer.classList.contains('fullscreen-editor')) {
+                btnFullscreen.innerText = "✕";
+            } else {
+                btnFullscreen.innerText = "⛶";
+            }
+        });
+    }
 }
 
 function loadQuestion(q) {
@@ -243,10 +327,21 @@ function loadQuestion(q) {
     });
     editor.setState(newState);
 
-    // Setup 3D Scene
+// Setup 3D Scene
     if (vAPI.isPlaying) vAPI.stop();
     q.setupScene(vAPI);
+    vAPI.actionQueue.forEach(a => vAPI.playAction(a));
+    highlightLine(0);
 }
+
+let traceSteps = [];
+let currentStepIdx = -1;
+let autoVarBlocks = {};
+let lastQLen = 0;
+
+let stepperMode = 'USER';
+let currentSolutionSteps = [];
+let currentSolutionStepIdx = -1;
 
 async function runUserCode() {
     if (!currentQuestion) return;
@@ -258,20 +353,105 @@ async function runUserCode() {
 
     // Reset scene to initial state before running
     currentQuestion.setupScene(vAPI);
+    highlightLine(0);
+    
+    // Instantly play setup actions in parallel so they are visible
+    await Promise.all(vAPI.actionQueue.map(a => vAPI.playAction(a)));
 
     const code = editor.state.doc.toString();
     const result = await codeRunner.runCode(code);
 
-    if (result.success) {
-        // Play animations
-        btnRun.innerText = "Visualizing...";
-        await vAPI.play(() => {
+    if (result.success && result.steps) {
+        traceSteps = result.steps;
+        if (traceSteps.length > 0) {
+            currentStepIdx = -1;
+            lastQLen = vAPI.actionQueue.length;
+            autoVarBlocks = {};
+            
+            btnRun.style.display = 'none';
+            btnNext.style.display = 'block';
+            btnNext.disabled = false;
+            btnNext.innerText = "Start Stepping ➔";
+        } else {
             btnRun.innerText = "Run Code";
             btnRun.disabled = false;
-        });
+        }
     } else {
-        errorMsg.innerText = result.error;
+        errorMsg.innerText = result.error || "Failed to run code.";
         btnRun.innerText = "Run Code";
         btnRun.disabled = false;
     }
+}
+
+async function handleNextStep() {
+    btnNext.disabled = true;
+    
+    if (stepperMode === 'SOLUTION') {
+        currentSolutionStepIdx++;
+        if (currentSolutionStepIdx >= currentSolutionSteps.length) {
+            btnNext.innerText = "Done!";
+            return;
+        }
+        
+        btnNext.innerText = "Next Step ➔";
+        const step = currentSolutionSteps[currentSolutionStepIdx];
+        
+        document.getElementById('step-title').innerText = `Step ${currentSolutionStepIdx + 1} of ${currentSolutionSteps.length}`;
+        document.getElementById('step-desc').innerText = step.desc;
+        document.getElementById('step-code').innerText = step.code;
+        
+        // Execute manual animations for this step
+        vAPI.actionQueue = [];
+        step.animate(vAPI);
+        for (let a of vAPI.actionQueue) {
+            await vAPI.playAction(a);
+        }
+        
+        btnNext.disabled = false;
+        return;
+    }
+    
+    currentStepIdx++;
+    
+    if (currentStepIdx >= traceSteps.length) {
+        // We reached the end
+        if (lastQLen < vAPI.actionQueue.length) {
+            const actions = vAPI.actionQueue.slice(lastQLen);
+            for (let a of actions) await vAPI.playAction(a);
+        }
+        btnNext.innerText = "Done!";
+        highlightLine(0);
+        return;
+    }
+    
+    const step = traceSteps[currentStepIdx];
+    highlightLine(step.line);
+    
+    // Play any actions from previous steps
+    const actions = vAPI.actionQueue.slice(lastQLen, step.q_len);
+    lastQLen = step.q_len;
+    for (let a of actions) {
+        await vAPI.playAction(a);
+    }
+    
+    // Auto-variables
+    const newLocals = step.locals;
+    const varPromises = [];
+    let x = -5, y = -3;
+    for (const [k, v] of Object.entries(newLocals)) {
+        if (!autoVarBlocks[k]) {
+            const bId = `auto_${k}`;
+            autoVarBlocks[k] = { id: bId, val: v };
+            varPromises.push(vAPI.playAction({ type: 'SPAWN', id: bId, value: `${k} = ${v}`, colorKey: "ORANGE", x, y, z: 0, delay: 0 }));
+        } else if (autoVarBlocks[k].val !== v) {
+            autoVarBlocks[k].val = v;
+            varPromises.push(vAPI.playAction({ type: 'UPDATE', id: autoVarBlocks[k].id, newValue: `${k} = ${v}`, colorKey: "YELLOW", delay: 0 }));
+        }
+        x += 3.5;
+        if (x > 5) { x = -5; y -= 1.8; }
+    }
+    await Promise.all(varPromises);
+    
+    btnNext.innerText = "Next Step ➔";
+    btnNext.disabled = false;
 }

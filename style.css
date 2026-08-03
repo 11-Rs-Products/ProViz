@@ -837,8 +837,44 @@ footer {
   color: var(--text-muted);
   border-bottom: 1px solid var(--border-color);
   border-radius: 8px 8px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
+.code-container.fullscreen-editor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+  margin: 0;
+  border-radius: 0;
+  border: none;
+}
+.code-container.fullscreen-editor .code-header {
+  border-radius: 0;
+}
+.code-container.fullscreen-editor #editor-container {
+  border-radius: 0;
+}
+
+/* CodeMirror 6 Overrides for Scrolling & Highlighting */
+.cm-editor {
+  height: 100%;
+}
+.cm-scroller {
+  overflow: auto;
+}
+.cm-highlightLine {
+  background-color: rgba(239, 68, 68, 0.25) !important;
+}
+
+.buttons {
+  display: flex;
+  gap: 0.5rem;
+}
 .buttons button {
   padding: 0.75rem;
   border: none;

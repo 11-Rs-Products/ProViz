@@ -440,16 +440,24 @@
           </div>
           
           <div class="code-container" style="flex: 1; display: flex; flex-direction: column; min-height: 250px;">
-            <div class="code-header">
-              <span>Python Editor</span>
+            <div class="code-header" style="display: flex; justify-content: space-between; align-items: center;">
+              <span id="code-header-title">Python Editor</span>
+              <button id="btn-fullscreen" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem;" title="Toggle Fullscreen">⛶</button>
             </div>
             <div id="editor-container" style="flex: 1; background: #1e1e1e; overflow: hidden; border-radius: 0 0 8px 8px;">
               <!-- CodeMirror injected here -->
             </div>
+            <div id="solution-stepper" style="display: none; flex: 1; background: #1e1e1e; flex-direction: column; padding: 1.5rem; border-radius: 0 0 8px 8px; overflow-y: auto;">
+              <h3 id="step-title" style="color: #10b981; margin-bottom: 0.5rem; font-size: 1.25rem;">Step 1</h3>
+              <p id="step-desc" style="color: #94a3b8; margin-bottom: 1.5rem; line-height: 1.6; font-size: 1.1rem;"></p>
+              <pre style="background: #0f172a; padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin: 0;"><code id="step-code" style="color: #e2e8f0; font-family: var(--font-mono); font-size: 1.05rem; line-height: 1.5;"></code></pre>
+            </div>
           </div>
           
-          <div class="buttons" style="margin-top: 1rem;">
+          <div class="buttons" style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+            <button id="btn-solution" class="reset" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5;">Show Solution</button>
             <button id="btn-run" class="primary" style="flex: 1;">Run Code</button>
+            <button id="btn-next" class="primary" style="flex: 1; display: none; background: #10b981;">Next Step ➔</button>
             <button id="btn-reset" class="reset">Reset Scene</button>
           </div>
         </div>
