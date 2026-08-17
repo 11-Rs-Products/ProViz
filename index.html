@@ -395,7 +395,7 @@
           </svg>
         </div>
         <h2 style="margin-bottom: 0.5rem; font-size: 2rem;">Sign In to ProViz</h2>
-        <p style="margin-bottom: 2rem; color: #94a3b8; font-size: 0.95rem;">IITM BS & University Account Authentication</p>
+        <p style="margin-bottom: 2rem; color: #94a3b8; font-size: 0.95rem;">IITM BS &amp; University Account Authentication</p>
         
         <button id="btn-login" style="background: var(--gradient-button); color: white; border: none; padding: 0.9rem 1.5rem; border-radius: 10px; font-size: 1.05rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.75rem; width: 100%; box-shadow: 0 4px 20px rgba(37,99,235,0.4);">
           <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#fff" d="M21.35 11.1h-9.17v2.73h5.51c-.24 1.27-.95 2.34-2.03 3.06v2.54h3.29c1.92-1.77 3.03-4.38 3.03-7.46 0-.71-.06-1.4-.17-2.07z"/><path fill="#fff" d="M12.18 21c2.75 0 5.06-.91 6.75-2.47l-3.29-2.54c-.91.61-2.07.97-3.46.97-2.66 0-4.91-1.79-5.71-4.21H3.07v2.62C4.77 18.73 8.19 21 12.18 21z"/><path fill="#fff" d="M6.47 12.75c-.2-.61-.31-1.26-.31-1.95s.11-1.34.31-1.95V6.23H3.07C2.39 7.59 2 9.12 2 10.8s.39 3.21 1.07 4.57l3.4-2.62z"/><path fill="#fff" d="M12.18 4.75c1.49 0 2.84.51 3.9 1.51l2.92-2.92C17.23 1.68 14.93 1 12.18 1 8.19 1 4.77 3.27 3.07 6.23l3.4 2.62c.8-2.42 3.05-4.1 5.71-4.1z"/></svg>
@@ -418,28 +418,35 @@
       <div id="ui-sidebar">
         <div class="header">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-            <h1>Py3D Visualizer</h1>
+            <h1>ProViz Simulator</h1>
             <button class="btn-back-home" title="Home Landing Page" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); color: white; padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.8rem; cursor: pointer;">
               🏠 Home
             </button>
           </div>
           
-          <div class="problem-selector" style="display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center;">
-            <label for="question-select" style="font-weight: 600;">Question:</label>
-            <select id="question-select" style="flex: 1; padding: 0.5rem; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white;">
+          <div class="problem-selector" style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem; align-items: center;">
+            <label for="question-select" style="font-weight: 600; white-space: nowrap;">Question:</label>
+            <select id="question-select" style="flex: 1; padding: 0.5rem; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 0.85rem;">
               <!-- Options populated dynamically -->
             </select>
           </div>
           <div id="error-msg" class="error-text"></div>
         </div>
 
-        <div class="controls-panel" style="flex: 1; display: flex; flex-direction: column;">
+        <div class="controls-panel" style="flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding-right: 4px; gap: 0.75rem;">
           <div class="step-info">
             <h2 id="question-title">Question Title</h2>
-            <p id="question-desc" style="white-space: pre-wrap;">Question description...</p>
+            <p id="question-desc" style="white-space: pre-wrap; font-size: 0.85rem;">Question description...</p>
           </div>
           
-          <div class="code-container" style="flex: 1; display: flex; flex-direction: column; min-height: 250px;">
+          <!-- Mode Tabs -->
+          <div class="mode-tabs">
+            <button id="tab-user" class="mode-tab mode-tab--active" data-mode="user">✏️ Try Yourself</button>
+            <button id="tab-solution" class="mode-tab" data-mode="solution">💡 View Solution</button>
+          </div>
+
+          <!-- Code Panel -->
+          <div class="code-container" style="display: flex; flex-direction: column; min-height: 180px; max-height: 280px; margin-top: 0;">
             <div class="code-header" style="display: flex; justify-content: space-between; align-items: center;">
               <span id="code-header-title">Python Editor</span>
               <button id="btn-fullscreen" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem;" title="Toggle Fullscreen">⛶</button>
@@ -447,19 +454,49 @@
             <div id="editor-container" style="flex: 1; background: #1e1e1e; overflow: hidden; border-radius: 0 0 8px 8px;">
               <!-- CodeMirror injected here -->
             </div>
-            <div id="solution-stepper" style="display: none; flex: 1; background: #1e1e1e; flex-direction: column; padding: 1.5rem; border-radius: 0 0 8px 8px; overflow-y: auto;">
-              <h3 id="step-title" style="color: #10b981; margin-bottom: 0.5rem; font-size: 1.25rem;">Step 1</h3>
-              <p id="step-desc" style="color: #94a3b8; margin-bottom: 1.5rem; line-height: 1.6; font-size: 1.1rem;"></p>
-              <pre style="background: #0f172a; padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin: 0;"><code id="step-code" style="color: #e2e8f0; font-family: var(--font-mono); font-size: 1.05rem; line-height: 1.5;"></code></pre>
+          </div>
+
+          <!-- Explanation Panel -->
+          <div id="explanation-panel" class="explanation-panel">
+            <div class="exp-badges" id="exp-badges">
+              <span class="exp-badge exp-badge--idle">Idle</span>
+            </div>
+            <div class="exp-primary" id="exp-primary">Run your code to start the visualization.</div>
+            <div class="exp-secondary" id="exp-secondary"></div>
+          </div>
+
+          <!-- Call Stack Panel -->
+          <div id="call-stack-panel" class="call-stack-panel" style="display: none;">
+            <div class="panel-label">📚 Call Stack</div>
+            <div id="call-stack-container" class="cs-container"></div>
+          </div>
+
+          <!-- Playback Controls -->
+          <div class="playback-controls" id="playback-controls" style="display: none;">
+            <div class="pb-progress">
+              <span id="pb-counter" class="pb-counter-text">0 / 0</span>
+              <div class="pb-bar-track">
+                <div class="pb-bar-fill" id="pb-bar-fill" style="width: 0%"></div>
+              </div>
+            </div>
+            <div class="pb-buttons">
+              <button id="btn-restart" class="pb-btn" title="Restart">⟳</button>
+              <button id="btn-prev" class="pb-btn" title="Previous Step">◀</button>
+              <button id="btn-play-pause" class="pb-btn pb-btn--primary" title="Play/Pause">▶ Play</button>
+              <button id="btn-next" class="pb-btn" title="Next Step">▶</button>
+            </div>
+            <div class="pb-speed">
+              <label for="speed-slider">Speed</label>
+              <input type="range" id="speed-slider" min="100" max="2000" value="700" step="100">
+              <span id="speed-label">0.7s</span>
             </div>
           </div>
-          
-          <div class="buttons" style="margin-top: 1rem; display: flex; gap: 0.5rem;">
-            <button id="btn-solution" class="reset" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5;">Show Solution</button>
-            <button id="btn-run" class="primary" style="flex: 1;">Run Code</button>
-            <button id="btn-next" class="primary" style="flex: 1; display: none; background: #10b981;">Next Step ➔</button>
-            <button id="btn-reset" class="reset">Reset Scene</button>
-          </div>
+        </div>
+
+        <!-- Action Buttons (Pinned at Sidebar Bottom) -->
+        <div class="buttons" style="padding-top: 0.75rem; display: flex; gap: 0.5rem; flex-shrink: 0; border-top: 1px solid rgba(255,255,255,0.08);">
+          <button id="btn-run" class="primary" style="flex: 1; padding: 0.75rem 1rem; font-size: 0.95rem; font-weight: 700; cursor: pointer;">▶ Run Code</button>
+          <button id="btn-reset" class="reset" style="padding: 0.75rem 1rem; font-size: 0.95rem; font-weight: 600; cursor: pointer;">↺ Reset</button>
         </div>
       </div>
     </div>

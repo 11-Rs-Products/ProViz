@@ -786,6 +786,8 @@ footer {
   height: 100vh;
   overflow: hidden;
   background-color: var(--bg-dark);
+  display: flex;
+  flex-direction: row;
 }
 
 #canvas-container {
@@ -960,4 +962,348 @@ footer {
     gap: 1rem;
     text-align: center;
   }
+}
+
+/* =====================================================
+   NEW UI COMPONENTS — ProViz 2.0 Simulator
+   ===================================================== */
+
+/* --- Mode Tabs --- */
+.mode-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 0.75rem;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.mode-tab {
+  flex: 1;
+  padding: 0.55rem 0.5rem;
+  background: rgba(0,0,0,0.2);
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font-body);
+}
+
+.mode-tab:hover {
+  background: rgba(255,255,255,0.07);
+  color: var(--text-main);
+}
+
+.mode-tab--active {
+  background: var(--gradient-button);
+  color: white;
+}
+
+/* --- Explanation Panel --- */
+.explanation-panel {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  margin: 0.5rem 0;
+  flex-shrink: 0;
+}
+
+.exp-badges {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.exp-badge {
+  padding: 0.15rem 0.55rem;
+  border-radius: 99px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.exp-badge--idle {
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--text-muted);
+  border-color: var(--border-color);
+}
+
+.exp-badge--call {
+  background: rgba(37,99,235,0.2);
+  color: #93c5fd;
+  border-color: rgba(37,99,235,0.3);
+}
+
+.exp-badge--return {
+  background: rgba(16,185,129,0.2);
+  color: #6ee7b7;
+  border-color: rgba(16,185,129,0.3);
+}
+
+.exp-badge--error {
+  background: rgba(239,68,68,0.2);
+  color: #fca5a5;
+  border-color: rgba(239,68,68,0.3);
+}
+
+.exp-badge--assign {
+  background: rgba(245,158,11,0.2);
+  color: #fcd34d;
+  border-color: rgba(245,158,11,0.3);
+}
+
+.exp-primary {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+  line-height: 1.5;
+  font-family: var(--font-body);
+  margin-bottom: 0.25rem;
+}
+
+.exp-secondary {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* --- Call Stack Panel --- */
+.call-stack-panel {
+  background: rgba(2, 6, 23, 0.7);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  padding: 0.6rem;
+  max-height: 160px;
+  overflow-y: auto;
+  flex-shrink: 0;
+  margin-bottom: 0.5rem;
+}
+
+.panel-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.5rem;
+}
+
+.cs-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.cs-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  gap: 0.2rem;
+}
+
+.cs-hint {
+  font-size: 0.68rem;
+  opacity: 0.6;
+}
+
+.cs-frame {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  transition: all 0.2s;
+}
+
+.cs-frame--top {
+  border-color: rgba(99, 102, 241, 0.4);
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.cs-frame--new {
+  animation: frame-push 0.3s ease;
+}
+
+@keyframes frame-push {
+  from { transform: translateY(-8px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.cs-frame-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cs-fn-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: #a5b4fc;
+}
+
+.cs-line-badge {
+  font-size: 0.67rem;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.05);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+
+.cs-locals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+}
+
+.cs-var {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+  background: rgba(0,0,0,0.2);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+}
+
+.cs-var-name {
+  color: #fcd34d;
+}
+
+.cs-var-val {
+  color: #86efac;
+}
+
+/* --- Playback Controls --- */
+.playback-controls {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  flex-shrink: 0;
+  margin-bottom: 0.25rem;
+}
+
+.pb-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.pb-counter-text {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  min-width: 42px;
+}
+
+.pb-bar-track {
+  flex: 1;
+  height: 4px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.pb-bar-fill {
+  height: 100%;
+  background: var(--gradient-button);
+  border-radius: 2px;
+  transition: width 0.2s ease;
+}
+
+.pb-buttons {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: center;
+  margin-bottom: 0.6rem;
+}
+
+.pb-btn {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-main);
+  border-radius: 8px;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font-body);
+  font-weight: 600;
+}
+
+.pb-btn:hover {
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(255,255,255,0.2);
+}
+
+.pb-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.pb-btn--primary {
+  background: var(--gradient-button);
+  border-color: transparent;
+  flex: 1;
+}
+
+.pb-btn--primary:hover {
+  filter: brightness(1.15);
+  background: var(--gradient-button);
+}
+
+.pb-speed {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.pb-speed label {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.pb-speed input[type="range"] {
+  flex: 1;
+  accent-color: var(--accent-indigo);
+  cursor: pointer;
+}
+
+.pb-speed span {
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  min-width: 28px;
+}
+
+/* --- CodeMirror Line Highlight --- */
+.cm-highlightLine {
+  background: rgba(99, 102, 241, 0.2) !important;
+  border-left: 3px solid #6366f1 !important;
+}
+
+/* --- Sidebar scrollable panel --- */
+.controls-panel {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
 }
