@@ -136,6 +136,16 @@ const layoutContainer = document.getElementById('layout-container');
 const btnLogin        = document.getElementById('btn-login');
 const loginError      = document.getElementById('login-error');
 
+const navBtnSignIn      = document.getElementById('nav-btn-signin');
+const navUserProfile   = document.getElementById('nav-user-profile');
+const navUserAvatar     = document.getElementById('nav-user-avatar');
+const navUserEmail      = document.getElementById('nav-user-email');
+const navBtnLogout      = document.getElementById('nav-btn-logout');
+const btnLogoutSidebar  = document.getElementById('btn-logout-sidebar');
+const sidebarUserPill   = document.getElementById('sidebar-user-pill');
+const sidebarUserAvatar = document.getElementById('sidebar-user-avatar');
+const sidebarUserEmail  = document.getElementById('sidebar-user-email');
+
 const selectEl        = document.getElementById('question-select');
 const titleEl         = document.getElementById('question-title');
 const descEl          = document.getElementById('question-desc');
@@ -178,6 +188,57 @@ let isPlayingBack     = false;
 // Landing Page + Auth
 // ─────────────────────────────────────────────────────────────────────────────
 
+function updateAuthUI(user) {
+    if (user) {
+        const initial = (user.displayName || user.email || 'U')[0].toUpperCase();
+        const email = user.email || '';
+
+        if (navBtnSignIn) navBtnSignIn.style.display = 'none';
+        if (navUserProfile) navUserProfile.style.display = 'flex';
+        if (navUserAvatar) navUserAvatar.textContent = initial;
+        if (navUserEmail) navUserEmail.textContent = email;
+
+        if (sidebarUserPill) sidebarUserPill.style.display = 'flex';
+        if (sidebarUserAvatar) sidebarUserAvatar.textContent = initial;
+        if (sidebarUserEmail) sidebarUserEmail.textContent = email;
+    } else {
+        if (navBtnSignIn) navBtnSignIn.style.display = 'inline-flex';
+        if (navUserProfile) navUserProfile.style.display = 'none';
+        if (sidebarUserPill) sidebarUserPill.style.display = 'none';
+    }
+}
+
+async function handleLogout(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    try {
+        await logoutUser();
+    } catch (err) {
+        console.warn('[Auth] logout error:', err);
+    }
+    currentUser = null;
+    updateAuthUI(null);
+    window.location.reload();
+}
+
+if (navBtnLogout) {
+    navBtnLogout.addEventListener('click', handleLogout);
+}
+
+if (btnLogoutSidebar) {
+    btnLogoutSidebar.addEventListener('click', handleLogout);
+}
+
+if (navBtnSignIn) {
+    navBtnSignIn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (loginError) loginError.innerText = '';
+        if (loginOverlay) loginOverlay.style.display = 'flex';
+    });
+}
+
 initLandingPage(() => {
     landingPage.style.display = 'none';
     if (currentUser) {
@@ -198,20 +259,12 @@ onAuthChange(async (user, error) => {
     }
 
     currentUser = user;
-    const navBtnAuth = document.getElementById('nav-btn-auth');
+    updateAuthUI(user);
 
     if (user && !isAppInitialized) {
         isAppInitialized = true;
         if (loginError) loginError.innerText = '';
         lastAuthError = null;
-
-        if (navBtnAuth) {
-            navBtnAuth.innerText = 'Log Out';
-            navBtnAuth.onclick = e => {
-                e.preventDefault(); e.stopPropagation();
-                logoutUser().then(() => window.location.reload());
-            };
-        }
 
         try { await saveUserEmail(user.email); } catch (e) { console.warn('[Auth] saveUserEmail failed:', e.message); }
         console.log('[Auth] User logged in, showing app...');
@@ -227,9 +280,6 @@ onAuthChange(async (user, error) => {
             renderer.setSize(w, h);
         }, 100);
     } else if (!user) {
-        if (navBtnAuth) { navBtnAuth.innerText = 'Sign In'; navBtnAuth.onclick = null; }
-        if (loginOverlay) loginOverlay.style.display = 'flex';
-        if (layoutContainer) layoutContainer.style.display = 'none';
         if (btnLogin) { btnLogin.innerText = 'Sign in with Google'; btnLogin.disabled = false; }
         if (loginError && lastAuthError) loginError.innerText = lastAuthError;
     }

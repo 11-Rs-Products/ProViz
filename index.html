@@ -33,8 +33,20 @@
         </ul>
 
         <div class="nav-actions">
-          <button id="nav-btn-auth" class="btn btn-outline btn-launch-app">Sign In</button>
-          <button class="btn btn-primary btn-launch-app">Launch App 🚀</button>
+          <button id="nav-btn-signin" class="btn btn-outline">Sign In</button>
+          
+          <div id="nav-user-profile" style="display: none; align-items: center; gap: 0.6rem;">
+            <div id="nav-user-badge" class="nav-user-badge" title="Logged in user">
+              <span id="nav-user-avatar" class="nav-user-avatar">U</span>
+              <span id="nav-user-email" class="nav-user-email"></span>
+            </div>
+            <button id="nav-btn-logout" class="btn btn-outline btn-logout-action" title="Sign Out" style="padding: 0.5rem 0.85rem; font-size: 0.85rem; border-color: rgba(239, 68, 68, 0.3); color: #fca5a5;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              <span>Logout</span>
+            </button>
+          </div>
+
+          <button id="nav-btn-launch" class="btn btn-primary btn-launch-app">Launch App 🚀</button>
         </div>
       </nav>
 
@@ -419,9 +431,24 @@
         <div class="header">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
             <h1>ProViz Simulator</h1>
-            <button class="btn-back-home" title="Home Landing Page" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); color: white; padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.8rem; cursor: pointer;">
-              🏠 Home
-            </button>
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <button class="btn-back-home" title="Home Landing Page" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); color: white; padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 0.25rem;">
+                🏠 Home
+              </button>
+              <button id="btn-logout-sidebar" class="btn-logout-action" title="Log Out" style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Logout
+              </button>
+            </div>
+          </div>
+
+          <!-- User profile status bar in sidebar -->
+          <div id="sidebar-user-pill" style="display: none; align-items: center; justify-content: space-between; gap: 0.5rem; background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.35rem 0.6rem; margin-bottom: 0.75rem; font-size: 0.8rem; color: var(--text-sub);">
+            <div style="display: flex; align-items: center; gap: 0.45rem; overflow: hidden;">
+              <div id="sidebar-user-avatar" class="nav-user-avatar" style="width: 20px; height: 20px; font-size: 0.7rem; flex-shrink: 0;">U</div>
+              <span id="sidebar-user-email" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+            </div>
+            <span style="font-size: 0.7rem; color: #10b981; background: rgba(16,185,129,0.15); padding: 0.15rem 0.4rem; border-radius: 4px; flex-shrink: 0;">Active</span>
           </div>
           
           <div class="problem-selector" style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem; align-items: center;">
