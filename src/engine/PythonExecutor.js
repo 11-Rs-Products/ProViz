@@ -1,42 +1,23 @@
 /**
- * PythonExecutor — Language adapter for Python execution via Pyodide.
+ * PythonExecutor — Language runtime adapter for Python execution via Pyodide.
  *
  * Responsibilities:
  *  - Initialize Pyodide WASM runtime
- *  - Execute Python code through a full sys.settrace tracer
- *  - Capture: line, call, return, exception events
- *  - Capture: local variables, global variables, call stack, changed variables
- *  - Return a structured ExecutionTrace object
- *
- * ExecutionTrace shape:
- * {
- *   metadata: { language, version, timestamp, duration_ms },
- *   initial_state: {},
- *   events: TraceEvent[],
- *   final_state: { output, variables },
- *   result: { success, return_value, output },
- *   error: null | { type, message, line, traceback }
- * }
- *
- * TraceEvent shape:
- * {
- *   event_id: number,
- *   type: 'line' | 'call' | 'return' | 'exception',
- *   line: number,
- *   function: string,
- *   locals: {},
- *   changed_variables: [{ name, old_value, new_value }],
- *   stack: [{ function, line }],
- *   stack_depth: number,
- *   return_value: any,          // only on 'return' events
- *   exception_type: string,     // only on 'exception' events
- *   exception_message: string,  // only on 'exception' events
- * }
+ *  - Execute Python code through sys.settrace tracer
+ *  - Preserve Python object identity (id(v) -> stable ProViz objectId)
+ *  - Support structured primitives, lists, dicts, sets, tuples, and class instances
+ *  - Detect and safely handle cyclic references without infinite recursion
+ *  - Normalize raw events into canonical Universal Execution Trace (UET) with Heap Graph
+ *  - Remain completely independent of visualizers, DOM, and problem registries.
  */
 
+import { createExecutionRequest, ExecutionRequest } from '../trace/ExecutionRequest.js';
+import { createExecutionTrace, createTraceEvent, TRACE_SCHEMA_VERSION } from '../trace/TraceSchema.js';
+
 const MAX_EVENTS = 50000;
-const MAX_RUNTIME_MS = 5000;
-const MAX_VAL_STR = 80;
+const MAX_DEPTH = 8;
+const MAX_ITEMS = 64;
+const MAX_STR_LEN = 120;
 
 export class PythonExecutor {
     constructor() {
@@ -76,32 +57,119 @@ import sys
 import json
 import traceback as _traceback_mod
 
-# ---- Serializer ----
-def _safe_str(v, max_len=${MAX_VAL_STR}):
-    try:
-        s = repr(v)
-        if len(s) > max_len:
-            s = s[:max_len - 3] + '...'
-        return s
-    except Exception:
-        return '<unserializable>'
+MAX_DEPTH = ${MAX_DEPTH}
+MAX_ITEMS = ${MAX_ITEMS}
+MAX_STR_LEN = ${MAX_STR_LEN}
 
 # Sentinel for "no previous value"
 _MISSING = object()
 
-# ---- Tracer class ----
+# ---- Tracer class with Object Identity & Heap Reconstruction ----
 class _ProVizTracer:
     EXCLUDED_NAMES = frozenset([
         'js', 'sys', '__builtins__', '__name__', '__doc__',
         '_ProVizTracer', '_tracer_instance', '_user_code',
-        '_safe_str', '_MISSING', 'json', '_traceback_mod',
+        'json', '_traceback_mod', '_MISSING', 'MAX_DEPTH', 'MAX_ITEMS', 'MAX_STR_LEN',
     ])
 
     def __init__(self):
         self.events = []
         self._event_id = 0
-        self._prev_locals = {}   # function name -> dict of last-seen locals
-        self._output_lines = []
+        self._id_to_proviz = {}    # id(v) -> "obj_N"
+        self._obj_counter = 1
+        self._heap = {}            # "obj_N" -> serialized HeapObject dict
+        self._prev_locals = {}     # fn_name -> { var_name: structured_value }
+        self._prev_heap_states = {} # "obj_N" -> serialized representation for diffing
+
+    def _get_obj_id(self, obj):
+        py_id = id(obj)
+        if py_id not in self._id_to_proviz:
+            self._id_to_proviz[py_id] = f"obj_{self._obj_counter}"
+            self._obj_counter += 1
+        return self._id_to_proviz[py_id]
+
+    def _serialize_value(self, v, visited=None, depth=0):
+        if visited is None:
+            visited = set()
+
+        if v is None:
+            return {'kind': 'primitive', 'type': 'NoneType', 'value': None}
+        if isinstance(v, bool):
+            return {'kind': 'primitive', 'type': 'bool', 'value': v}
+        if isinstance(v, int):
+            return {'kind': 'primitive', 'type': 'int', 'value': v}
+        if isinstance(v, float):
+            return {'kind': 'primitive', 'type': 'float', 'value': v}
+        if isinstance(v, str):
+            val = v if len(v) <= MAX_STR_LEN else v[:MAX_STR_LEN - 3] + '...'
+            return {'kind': 'primitive', 'type': 'str', 'value': val}
+
+        # Check for heap-allocated object
+        obj_id = self._get_obj_id(v)
+        type_name = type(v).__name__
+        ref_val = {'kind': 'reference', 'type': type_name, 'objectId': obj_id}
+
+        # Cycle detection & depth protection
+        if id(v) in visited or depth > MAX_DEPTH:
+            return ref_val
+
+        visited.add(id(v))
+
+        try:
+            if isinstance(v, (list, tuple)):
+                t_name = 'tuple' if isinstance(v, tuple) else 'list'
+                elements = []
+                for item in v[:MAX_ITEMS]:
+                    elements.append(self._serialize_value(item, visited, depth + 1))
+                self._heap[obj_id] = {
+                    'id': obj_id,
+                    'type': t_name,
+                    'className': t_name,
+                    'elements': elements,
+                }
+            elif isinstance(v, set):
+                elements = []
+                for item in list(v)[:MAX_ITEMS]:
+                    elements.append(self._serialize_value(item, visited, depth + 1))
+                self._heap[obj_id] = {
+                    'id': obj_id,
+                    'type': 'set',
+                    'className': 'set',
+                    'elements': elements,
+                }
+            elif isinstance(v, dict):
+                entries = []
+                for k, val in list(v.items())[:MAX_ITEMS]:
+                    k_ser = self._serialize_value(k, visited, depth + 1)
+                    v_ser = self._serialize_value(val, visited, depth + 1)
+                    entries.append({'key': k_ser, 'value': v_ser})
+                self._heap[obj_id] = {
+                    'id': obj_id,
+                    'type': 'dict',
+                    'className': 'dict',
+                    'entries': entries,
+                }
+            elif hasattr(v, '__dict__') and not callable(v):
+                # Class instance
+                fields = {}
+                for k, val in v.__dict__.items():
+                    if not k.startswith('__'):
+                        fields[k] = self._serialize_value(val, visited, depth + 1)
+                self._heap[obj_id] = {
+                    'id': obj_id,
+                    'type': 'instance',
+                    'className': type_name,
+                    'fields': fields,
+                }
+            else:
+                # Opaque fallback for non-inspectable types
+                return {'kind': 'opaque', 'type': type_name, 'reason': 'opaque_type'}
+        except Exception as e:
+            return {'kind': 'opaque', 'type': type_name, 'reason': str(e)}
+        finally:
+            visited.remove(id(v))
+
+        return ref_val
 
     def trace(self, frame, event, arg):
         fn_name = frame.f_code.co_name
@@ -124,7 +192,7 @@ class _ProVizTracer:
         stack = list(reversed(stack))
         stack_depth = len(stack)
 
-        # Capture locals (filter noise)
+        # Capture structured locals
         raw_locals = {}
         for k, v in frame.f_locals.items():
             if k.startswith('_') or k in self.EXCLUDED_NAMES:
@@ -133,7 +201,21 @@ class _ProVizTracer:
                 continue
             if 'module' in str(type(v)):
                 continue
-            raw_locals[k] = _safe_str(v)
+            raw_locals[k] = self._serialize_value(v)
+
+        # Detect mutations in heap objects
+        mutations = []
+        for obj_id, current_state in list(self._heap.items()):
+            prev_state = self._prev_heap_states.get(obj_id)
+            if prev_state is not None and prev_state != current_state:
+                mutations.append({
+                    'targetObjectId': obj_id,
+                    'type': current_state.get('type'),
+                    'operation': 'mutate',
+                    'current': current_state,
+                })
+            # Update snapshot of heap state
+            self._prev_heap_states[obj_id] = json.loads(json.dumps(current_state))
 
         # Detect changed variables
         prev = self._prev_locals.get(fn_name, {})
@@ -142,8 +224,8 @@ class _ProVizTracer:
             old_v = prev.get(k, _MISSING)
             if old_v is _MISSING:
                 changed.append({'name': k, 'old_value': None, 'new_value': new_v, 'is_new': True})
-            elif old_v != new_v:
-                changed.append({'name': k, 'old_value': old_v, 'new_value': new_v, 'is_new': False})
+            elif old_v != new_v or any(m.get('targetObjectId') == new_v.get('objectId') for m in mutations):
+                changed.append({'name': k, 'old_value': old_v if old_v is not _MISSING else None, 'new_value': new_v, 'is_new': False})
         self._prev_locals[fn_name] = dict(raw_locals)
 
         ev = {
@@ -153,12 +235,14 @@ class _ProVizTracer:
             'function': fn_name,
             'locals': raw_locals,
             'changed_variables': changed,
+            'mutations': mutations,
             'stack': stack,
             'stack_depth': stack_depth,
+            'heap': json.loads(json.dumps(self._heap)),
         }
 
         if event == 'return':
-            ev['return_value'] = _safe_str(arg)
+            ev['return_value'] = self._serialize_value(arg)
         elif event == 'exception':
             exc_type, exc_val, _ = arg
             ev['exception_type'] = exc_type.__name__ if exc_type else 'Exception'
@@ -199,6 +283,7 @@ def _run_user_code(code_str):
                 'traceback': str(e),
             },
             'events': [],
+            'heap': {},
             'output': '',
         })
     except Exception as e:
@@ -209,10 +294,11 @@ def _run_user_code(code_str):
             'error': {
                 'type': type(e).__name__,
                 'message': str(e),
-                'line': None,
+                'line': getattr(e, 'lineno', None),
                 'traceback': tb_str,
             },
             'events': _tracer_instance.events,
+            'heap': _tracer_instance._heap,
             'output': output_buf.getvalue(),
         })
     finally:
@@ -222,6 +308,7 @@ def _run_user_code(code_str):
     return json.dumps({
         'success': True,
         'events': _tracer_instance.events,
+        'heap': _tracer_instance._heap,
         'output': output_buf.getvalue(),
         'error': None,
     })
@@ -229,53 +316,126 @@ def _run_user_code(code_str):
     }
 
     /**
-     * Execute Python code and return a structured ExecutionTrace.
-     * @param {string} pythonCode
-     * @returns {Promise<ExecutionTrace>}
+     * Execute Python code or ExecutionRequest and return a canonical Universal Execution Trace (UET) with Heap Graph.
+     *
+     * @param {string|ExecutionRequest|object} input - Python code or ExecutionRequest
+     * @returns {Promise<object>} Canonical UET ExecutionTrace object
      */
-    async execute(pythonCode) {
+    async execute(input) {
         if (!this.isReady) {
             throw new Error('[PythonExecutor] Not initialized. Call init() first.');
         }
 
+        const request = input instanceof ExecutionRequest ? input : createExecutionRequest(input);
+        const code = request.getMainCode();
         const startMs = performance.now();
 
         try {
-            this.pyodide.globals.set('_user_code_to_run', pythonCode);
+            this.pyodide.globals.set('_user_code_to_run', code);
             const rawJson = await this.pyodide.runPythonAsync('_run_user_code(_user_code_to_run)');
             const raw = JSON.parse(rawJson);
             const durationMs = performance.now() - startMs;
 
-            const trace = {
+            // Map raw tracer events to canonical UET events
+            const uetEvents = [];
+            let eventCounter = 0;
+
+            const rawEvents = raw.events || [];
+            for (let i = 0; i < rawEvents.length; i++) {
+                const r = rawEvents[i];
+                const uetEvent = createTraceEvent({
+                    id: eventCounter++,
+                    type: r.type,
+                    source: {
+                        file: request.entrypoint,
+                        line: r.line,
+                        column: null,
+                    },
+                    scope: {
+                        function: r.function || '<module>',
+                        depth: r.stack_depth || (r.stack ? r.stack.length : 1),
+                    },
+                    data: {
+                        locals: r.locals || {},
+                        changed_variables: r.changed_variables || [],
+                        mutations: r.mutations || [],
+                        stack: r.stack || [],
+                        heap: r.heap || raw.heap || {},
+                        return_value: r.return_value,
+                        exception_type: r.exception_type,
+                        exception_message: r.exception_message,
+                    },
+                });
+                uetEvents.push(uetEvent);
+            }
+
+            // Append program_end event if execution succeeded
+            if (raw.success) {
+                uetEvents.push(createTraceEvent({
+                    id: eventCounter++,
+                    type: 'program_end',
+                    source: { file: request.entrypoint, line: null, column: null },
+                    scope: { function: '<module>', depth: 0 },
+                    data: {
+                        output: raw.output || '',
+                        heap: raw.heap || {},
+                    },
+                }));
+            }
+
+            const trace = createExecutionTrace({
+                version: TRACE_SCHEMA_VERSION,
                 metadata: {
                     language: 'python',
-                    version: '3.x (Pyodide)',
+                    runtime: 'pyodide',
+                    version: '3.x',
                     timestamp: Date.now(),
                     duration_ms: durationMs,
-                    event_count: raw.events.length,
+                    event_count: uetEvents.length,
                 },
-                initial_state: {},
-                events: raw.events || [],
-                final_state: {
-                    output: raw.output || '',
+                source: {
+                    entrypoint: request.entrypoint,
+                    files: request.files,
                 },
+                events: uetEvents,
                 result: {
                     success: raw.success,
                     output: raw.output || '',
+                    error: raw.error || null,
                 },
-                error: raw.error || null,
-            };
+                final_state: {
+                    output: raw.output || '',
+                    heap: raw.heap || {},
+                },
+            });
+
+            // Attach global heap for reference resolution
+            trace.heap = raw.heap || {};
 
             return trace;
         } catch (err) {
-            return {
-                metadata: { language: 'python', duration_ms: performance.now() - startMs },
-                initial_state: {},
+            return createExecutionTrace({
+                version: TRACE_SCHEMA_VERSION,
+                metadata: {
+                    language: 'python',
+                    runtime: 'pyodide',
+                    duration_ms: performance.now() - startMs,
+                },
+                source: {
+                    entrypoint: request.entrypoint,
+                    files: request.files,
+                },
                 events: [],
-                final_state: { output: '' },
-                result: { success: false, output: '' },
-                error: { type: 'InternalError', message: err.message, line: null },
-            };
+                result: {
+                    success: false,
+                    output: '',
+                    error: { type: 'InternalError', message: err.message, line: null },
+                },
+                final_state: {
+                    output: '',
+                    heap: {},
+                },
+            });
         }
     }
 }

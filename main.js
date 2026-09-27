@@ -22,6 +22,7 @@ import { python } from '@codemirror/lang-python';
 
 import { PythonExecutor }    from './src/engine/PythonExecutor.js';
 import { TraceTransformer }  from './src/engine/TraceTransformer.js';
+import { createExecutionRequest } from './src/trace/ExecutionRequest.js';
 import { PlaybackEngine }    from './src/PlaybackEngine.js';
 import { ExplanationEngine } from './src/ExplanationEngine.js';
 import { BaseVisualizer }    from './src/visualizers/BaseVisualizer.js';
@@ -32,6 +33,24 @@ import { questions }         from './src/questions/registry.js';
 import { initLandingPage }   from './src/landing.js';
 import { onAuthChange, loginWithGoogle, logoutUser } from './src/firebase.js';
 import { fetchQuestions, saveUserEmail } from './src/sanity.js';
+
+// Scratchpad configuration for Freeform Python execution
+const SCRATCHPAD_OPTION = {
+    id: '__scratchpad__',
+    title: '✨ Freeform Scratchpad (Custom Code)',
+    description: 'Write, execute, and step through arbitrary Python code in 3D. Variables, loops, branches, and call stacks are traced automatically.',
+    isScratchpad: true,
+    starter_code: `# Write any Python code here
+x = 10
+y = 20
+total = x + y
+print(f"Total is: {total}")
+`,
+    visualization: {
+        primary_visualizer: 'variables',
+        tracked_variables: [],
+    },
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Three.js Scene Setup
@@ -318,14 +337,16 @@ async function initApp() {
     // Load questions (Sanity first, local fallback)
     let sanityQs = [];
     try { sanityQs = await fetchQuestions(); } catch (e) { /* ignore */ }
-    allQuestions = (sanityQs && sanityQs.length > 0) ? sanityQs : questions;
+    const fetchedOrLocal = (sanityQs && sanityQs.length > 0) ? sanityQs : questions;
+    // Scratchpad is the first option for freeform execution
+    allQuestions = [SCRATCHPAD_OPTION, ...fetchedOrLocal];
 
     // Populate selector
     selectEl.innerHTML = '';
     allQuestions.forEach((q, i) => {
         const opt = document.createElement('option');
         opt.value = i;
-        opt.innerText = `${q.difficulty ? `[${q.difficulty.toUpperCase()}] ` : ''}${q.title}`;
+        opt.innerText = q.isScratchpad ? q.title : `${q.difficulty ? `[${q.difficulty.toUpperCase()}] ` : ''}${q.title}`;
         selectEl.appendChild(opt);
     });
 
@@ -363,9 +384,7 @@ async function initApp() {
     btnRestart.addEventListener('click', () => {
         playback.restart();
         updateUI(null);
-        baseVis.clearAll(); varViz.reset(); arrayViz.clearAll();
-        callStackViz.reset();
-        if (currentQuestion) setupScene(currentQuestion);
+        setupScene(currentQuestion);
     });
 
     speedSlider?.addEventListener('input', () => {
@@ -398,7 +417,7 @@ async function initApp() {
         if (frame) renderFrame(frame);
     });
 
-    // Load first question
+    // Load first item (Scratchpad)
     if (allQuestions.length > 0) loadQuestion(allQuestions[0]);
 }
 
@@ -407,12 +426,21 @@ async function initApp() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function loadQuestion(q) {
-    currentQuestion = q;
-    titleEl.innerText = q.title;
-    descEl.innerText = q.description;
+    currentQuestion = q || SCRATCHPAD_OPTION;
+    titleEl.innerText = currentQuestion.title;
+    descEl.innerText = currentQuestion.description;
     errorMsg.innerText = '';
 
-    const code = activeMode === 'user' ? (q.starter_code || q.initialCode || '') : (q.solution_code || '');
+    if (currentQuestion.isScratchpad) {
+        if (tabSolution) tabSolution.style.display = 'none';
+        switchMode('user');
+    } else {
+        if (tabSolution) tabSolution.style.display = 'inline-block';
+    }
+
+    const code = activeMode === 'user'
+        ? (currentQuestion.starter_code || currentQuestion.initialCode || '')
+        : (currentQuestion.solution_code || '');
     const newState = EditorState.create({ doc: code, extensions: [basicSetup, python(), lineHighlightField] });
     editor.setState(newState);
 
@@ -425,8 +453,8 @@ function setupScene(q) {
     arrayViz.clearAll();
     callStackViz.reset();
 
-    // Let question configure initial scene (e.g. array layout)
-    if (q.visualization?.initial_scene) {
+    // Let question configure initial scene if provided
+    if (q && q.visualization?.initial_scene) {
         const ctx = { baseVis, varViz, arrayViz };
         q.visualization.initial_scene(ctx);
     }
@@ -441,11 +469,10 @@ function switchMode(mode) {
     tabUser?.classList.toggle('mode-tab--active', mode === 'user');
     tabSolution?.classList.toggle('mode-tab--active', mode === 'solution');
 
-    if (!currentQuestion) return;
-
+    const q = currentQuestion || SCRATCHPAD_OPTION;
     const code = mode === 'user'
-        ? (currentQuestion.starter_code || currentQuestion.initialCode || '')
-        : (currentQuestion.solution_code || '');
+        ? (q.starter_code || q.initialCode || '')
+        : (q.solution_code || '# No solution code for freeform scratchpad.\n');
     const newState = EditorState.create({ doc: code, extensions: [basicSetup, python(), lineHighlightField] });
     editor.setState(newState);
 
@@ -458,18 +485,27 @@ function switchMode(mode) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function runCode() {
-    if (!currentQuestion) return;
     errorMsg.innerText = '';
     btnRun.disabled = true;
     btnRun.innerText = '⏳ Running...';
 
-    // Setup the scene
+    // Setup the scene (handles both problem mode and freeform scratchpad)
     setupScene(currentQuestion);
 
-    const code = editor.state.doc.toString();
+    const code = editor ? editor.state.doc.toString() : '';
+    const isProblem = currentQuestion && !currentQuestion.isScratchpad;
+    const request = createExecutionRequest({
+        code,
+        language: 'python',
+        context: isProblem ? {
+            problemId: currentQuestion.id,
+            visualization: currentQuestion.visualization,
+        } : null,
+    });
+
     let trace;
     try {
-        trace = await executor.execute(code);
+        trace = await executor.execute(request);
     } catch (e) {
         errorMsg.innerText = `Execution error: ${e.message}`;
         btnRun.innerText = '▶ Run Code';
@@ -477,14 +513,15 @@ async function runCode() {
         return;
     }
 
-    if (trace.error && !trace.events.length) {
-        errorMsg.innerText = `${trace.error.type}: ${trace.error.message}${trace.error.line ? ` (line ${trace.error.line})` : ''}`;
+    if (trace.result?.error && (!trace.events || trace.events.length === 0)) {
+        const err = trace.result.error;
+        errorMsg.innerText = `${err.type}: ${err.message}${err.line ? ` (line ${err.line})` : ''}`;
         btnRun.innerText = '▶ Run Code';
         btnRun.disabled = false;
         return;
     }
 
-    // Transform raw events → visualization frames
+    // Transform UET trace → visualization frames
     const frames = transformer.transform(trace, currentQuestion?.visualization || {});
 
     if (frames.length === 0) {
@@ -494,8 +531,8 @@ async function runCode() {
         return;
     }
 
-    // Load frames into playback engine
-    playback.setFrames(frames);
+    // Load trace into playback engine with StateReconstructor & checkpoints
+    playback.setFrames(trace, currentQuestion?.visualization || {});
 
     // Show playback controls
     playbackControls.style.display = 'block';
