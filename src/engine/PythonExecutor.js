@@ -182,12 +182,24 @@ class _ProVizTracer:
         if len(self.events) >= ${MAX_EVENTS}:
             return None   # Stop tracing
 
+        # Clean filename
+        clean_file = frame.f_code.co_filename
+        if clean_file.startswith('/home/pyodide/'):
+            clean_file = clean_file[len('/home/pyodide/'):]
+        elif clean_file.startswith('./'):
+            clean_file = clean_file[2:]
+        elif clean_file == '<user_code>':
+            clean_file = '<entrypoint>'
+
         # Build stack snapshot
         stack = []
         f = frame
         while f is not None:
             if f.f_code.co_name not in ('_run_user_code', '<module>_outer'):
-                stack.append({'function': f.f_code.co_name, 'line': f.f_lineno})
+                f_name = f.f_code.co_filename
+                if f_name.startswith('/home/pyodide/'): f_name = f_name[len('/home/pyodide/'):]
+                elif f_name == '<user_code>': f_name = '<entrypoint>'
+                stack.append({'function': f.f_code.co_name, 'line': f.f_lineno, 'file': f_name})
             f = f.f_back
         stack = list(reversed(stack))
         stack_depth = len(stack)
@@ -232,6 +244,7 @@ class _ProVizTracer:
             'event_id': self._event_id,
             'type': event,
             'line': frame.f_lineno,
+            'file': clean_file,
             'function': fn_name,
             'locals': raw_locals,
             'changed_variables': changed,
@@ -331,6 +344,25 @@ def _run_user_code(code_str):
         const startMs = performance.now();
 
         try {
+            // Write multi-file virtual FS files to Pyodide if files map is provided
+            if (request.files && typeof request.files === 'object') {
+                for (const [filePath, content] of Object.entries(request.files)) {
+                    try {
+                        const parts = filePath.split('/');
+                        if (parts.length > 1) {
+                            let dirPath = '';
+                            for (let p = 0; p < parts.length - 1; p++) {
+                                dirPath += (p > 0 ? '/' : '') + parts[p];
+                                try { this.pyodide.FS.mkdir(dirPath); } catch (e) {}
+                            }
+                        }
+                        this.pyodide.FS.writeFile(filePath, content);
+                    } catch (e) {
+                        console.warn('[PythonExecutor] Could not write file to Pyodide FS:', filePath, e);
+                    }
+                }
+            }
+
             this.pyodide.globals.set('_user_code_to_run', code);
             const rawJson = await this.pyodide.runPythonAsync('_run_user_code(_user_code_to_run)');
             const raw = JSON.parse(rawJson);
@@ -343,11 +375,25 @@ def _run_user_code(code_str):
             const rawEvents = raw.events || [];
             for (let i = 0; i < rawEvents.length; i++) {
                 const r = rawEvents[i];
+                const eventFile = (r.file && r.file !== '<entrypoint>') ? r.file : request.entrypoint;
+                let fileId = null;
+                let moduleId = null;
+                if (request.workspaceSnapshot) {
+                    const f = request.workspaceSnapshot.getFileByPath(eventFile);
+                    if (f) {
+                        fileId = f.id;
+                        moduleId = f.moduleId;
+                    }
+                }
+
                 const uetEvent = createTraceEvent({
                     id: eventCounter++,
                     type: r.type,
                     source: {
-                        file: request.entrypoint,
+                        file: eventFile,
+                        path: eventFile,
+                        fileId,
+                        moduleId,
                         line: r.line,
                         column: null,
                     },

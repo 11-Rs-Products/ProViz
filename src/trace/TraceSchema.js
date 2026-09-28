@@ -48,13 +48,19 @@ export function createTraceEvent({
     data = {},
     timestamp = null,
 }) {
+    const rawPath = source.path || source.file || 'main.py';
     return {
         id,
         type,
         source: {
-            file: source.file || 'main.py',
+            file: source.file || rawPath,
+            path: rawPath,
+            fileId: source.fileId || null,
+            moduleId: source.moduleId || null,
             line: typeof source.line === 'number' ? source.line : null,
             column: typeof source.column === 'number' ? source.column : null,
+            endLine: typeof source.endLine === 'number' ? source.endLine : null,
+            endColumn: typeof source.endColumn === 'number' ? source.endColumn : null,
         },
         scope: {
             function: scope.function || '<module>',

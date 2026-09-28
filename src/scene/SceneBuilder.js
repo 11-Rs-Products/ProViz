@@ -165,6 +165,9 @@ export class SceneBuilder {
                 metadata: {
                     depth: frame.depth,
                     functionName: frame.functionName,
+                    moduleId: frame.source?.moduleId || null,
+                    fileId: frame.source?.fileId || null,
+                    sourceLocation: frame.source || null,
                 },
             });
 
@@ -194,6 +197,8 @@ export class SceneBuilder {
                     metadata: {
                         varName,
                         scope: frame.functionName,
+                        declaringModuleId: frame.source?.moduleId || null,
+                        declaringFileId: frame.source?.fileId || null,
                     },
                 });
 

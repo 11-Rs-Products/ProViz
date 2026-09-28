@@ -39,10 +39,16 @@ export class DebuggerState {
         this.status = status;
         this.frameIndex = frameIndex;
         this.totalFrames = totalFrames;
+        const rawPath = sourceLocation?.path || sourceLocation?.file || 'main.py';
         this.sourceLocation = {
-            file: sourceLocation?.file || 'main.py',
+            file: sourceLocation?.file || rawPath,
+            path: rawPath,
+            fileId: sourceLocation?.fileId || null,
+            moduleId: sourceLocation?.moduleId || null,
             line: sourceLocation?.line ?? null,
             column: sourceLocation?.column ?? null,
+            endLine: sourceLocation?.endLine ?? null,
+            endColumn: sourceLocation?.endColumn ?? null,
         };
         this.runtimeState = runtimeState;
         this.sceneGraph = sceneGraph;

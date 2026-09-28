@@ -114,6 +114,11 @@ export class StateReconstructor {
     _applyFrameTransition(state, frame) {
         if (!frame) return;
 
+        const currentFile = frame.file || frame.source?.file || frame.source?.path || state.currentSource.file || 'main.py';
+        state.currentSource.file = currentFile;
+        state.currentSource.path = currentFile;
+        if (frame.source?.fileId) state.currentSource.fileId = frame.source.fileId;
+        if (frame.source?.moduleId) state.currentSource.moduleId = frame.source.moduleId;
         state.currentSource.line = frame.current_line ?? state.currentSource.line;
 
         const eventType = frame.event_type;
@@ -123,7 +128,13 @@ export class StateReconstructor {
             state.pushCallFrame({
                 frameId: `frame_${frame.stack_depth || state.callStack.length + 1}`,
                 functionName: frame.current_function || '<module>',
-                source: { file: state.currentSource.file, line: frame.current_line },
+                source: {
+                    file: currentFile,
+                    path: currentFile,
+                    fileId: frame.source?.fileId || null,
+                    moduleId: frame.source?.moduleId || null,
+                    line: frame.current_line,
+                },
                 locals: this._extractStructuredLocals(frame.variables),
                 depth: frame.stack_depth || state.callStack.length + 1,
             });
@@ -138,7 +149,13 @@ export class StateReconstructor {
                 state.pushCallFrame({
                     frameId: 'frame_1',
                     functionName: frame.current_function || '<module>',
-                    source: { file: state.currentSource.file, line: frame.current_line },
+                    source: {
+                        file: currentFile,
+                        path: currentFile,
+                        fileId: frame.source?.fileId || null,
+                        moduleId: frame.source?.moduleId || null,
+                        line: frame.current_line,
+                    },
                     locals: {},
                     depth: 1,
                 });

@@ -22,10 +22,17 @@ export class CallFrame {
     }) {
         this.frameId = frameId;
         this.functionName = functionName;
+        const rawPath = source?.path || source?.file || 'main.py';
         this.source = {
-            file: source?.file || 'main.py',
+            file: source?.file || rawPath,
+            path: rawPath,
+            fileId: source?.fileId || null,
+            moduleId: source?.moduleId || null,
             line: typeof source?.line === 'number' ? source.line : null,
+            column: typeof source?.column === 'number' ? source.column : null,
         };
+        this.fileId = this.source.fileId;
+        this.moduleId = this.source.moduleId;
         this.scope = scope instanceof Scope ? scope : new Scope('local', scope?.bindings || scope || {});
         this.depth = depth;
     }

@@ -127,17 +127,23 @@ export class Debugger {
 
     /**
      * Get current source location resolved deterministically from current frame.
-     * @returns {{ file: string, line: number|null, column: null }}
+     * @returns {{ file: string, path: string, fileId: string|null, moduleId: string|null, line: number|null, column: number|null, endLine: number|null, endColumn: number|null }}
      */
     getSourceLocation() {
         const frame = this._playbackEngine.getCurrentFrame();
         if (!frame) {
-            return { file: 'main.py', line: null, column: null };
+            return { file: 'main.py', path: 'main.py', fileId: null, moduleId: null, line: null, column: null, endLine: null, endColumn: null };
         }
+        const rawPath = frame.path || frame.file || frame.source?.path || frame.source?.file || 'main.py';
         return {
-            file: frame.file || frame.source?.file || 'main.py',
+            file: frame.file || rawPath,
+            path: rawPath,
+            fileId: frame.fileId || frame.source?.fileId || null,
+            moduleId: frame.moduleId || frame.source?.moduleId || null,
             line: frame.current_line ?? frame.source?.line ?? null,
-            column: frame.column ?? null,
+            column: frame.column ?? frame.source?.column ?? null,
+            endLine: frame.endLine ?? frame.source?.endLine ?? null,
+            endColumn: frame.endColumn ?? frame.source?.endColumn ?? null,
         };
     }
 
@@ -327,7 +333,7 @@ export class Debugger {
         // Step off current position if currently paused on a breakpoint
         if (this._playbackEngine.currentIdx >= 0 && !this._playbackEngine.isAtEnd) {
             const initialLoc = this.getSourceLocation();
-            if (this.hasBreakpoint(initialLoc.file, initialLoc.line)) {
+            if (this.hasBreakpoint(initialLoc, initialLoc.line)) {
                 this._playbackEngine.nextFrame();
             }
         }
@@ -349,7 +355,7 @@ export class Debugger {
 
             // Check for breakpoint hit
             const loc = this.getSourceLocation();
-            if (loc.line !== null && this.hasBreakpoint(loc.file, loc.line)) {
+            if (loc.line !== null && this.hasBreakpoint(loc, loc.line)) {
                 this._status = 'paused';
                 this._reason = 'breakpoint';
                 break;
@@ -366,7 +372,7 @@ export class Debugger {
         if (this._playbackEngine.isAtEnd && this._status === 'running') {
             const frame = this._playbackEngine.getCurrentFrame();
             const loc = this.getSourceLocation();
-            if (loc.line !== null && this.hasBreakpoint(loc.file, loc.line)) {
+            if (loc.line !== null && this.hasBreakpoint(loc, loc.line)) {
                 this._status = 'paused';
                 this._reason = 'breakpoint';
             } else if (frame?.event_type === 'exception' || frame?.exception) {
@@ -389,12 +395,18 @@ export class Debugger {
 
     /**
      * Add a breakpoint at file:line.
-     * @param {string} file
-     * @param {number} line
+     * @param {string|object} file - File name / path or config object
+     * @param {number} [line] - Line number
+     * @param {string} [fileId] - File ID
      * @returns {Breakpoint}
      */
-    addBreakpoint(file = 'main.py', line) {
-        const bp = new Breakpoint({ file, line, enabled: true });
+    addBreakpoint(file = 'main.py', line = null, fileId = null) {
+        let bp;
+        if (file && typeof file === 'object') {
+            bp = new Breakpoint(file);
+        } else {
+            bp = new Breakpoint({ file, line, fileId, enabled: true });
+        }
         this._breakpoints.set(bp.id, bp);
         this._notify(this.getDebuggerState());
         return bp;
@@ -402,13 +414,36 @@ export class Debugger {
 
     /**
      * Remove a breakpoint at file:line.
-     * @param {string} file
-     * @param {number} line
+     * @param {string|object} file
+     * @param {number} [line]
      * @returns {boolean} True if removed
      */
-    removeBreakpoint(file = 'main.py', line) {
+    removeBreakpoint(file = 'main.py', line = null) {
+        if (file && typeof file === 'object') {
+            const targetLine = file.line;
+            for (const [id, bp] of this._breakpoints.entries()) {
+                if (bp.matches(file, targetLine)) {
+                    this._breakpoints.delete(id);
+                    this._notify(this.getDebuggerState());
+                    return true;
+                }
+            }
+            return false;
+        }
+
         const id = `${file || 'main.py'}:${line}`;
-        const existed = this._breakpoints.delete(id);
+        let existed = this._breakpoints.delete(id);
+        if (!existed) {
+            // Check by matching
+            for (const [key, bp] of this._breakpoints.entries()) {
+                if (bp.matches(file, line)) {
+                    this._breakpoints.delete(key);
+                    existed = true;
+                    break;
+                }
+            }
+        }
+
         if (existed) {
             this._notify(this.getDebuggerState());
         }
@@ -417,33 +452,57 @@ export class Debugger {
 
     /**
      * Toggle a breakpoint at file:line.
-     * @param {string} file
-     * @param {number} line
+     * @param {string|object} file
+     * @param {number} [line]
+     * @param {string} [fileId]
      * @returns {boolean} True if breakpoint is now enabled, false if removed/disabled
      */
-    toggleBreakpoint(file = 'main.py', line) {
-        const id = `${file || 'main.py'}:${line}`;
-        if (this._breakpoints.has(id)) {
-            this._breakpoints.delete(id);
-            this._notify(this.getDebuggerState());
+    toggleBreakpoint(file = 'main.py', line = null, fileId = null) {
+        if (file && typeof file === 'object') {
+            if (this.hasBreakpoint(file, file.line)) {
+                this.removeBreakpoint(file);
+                return false;
+            } else {
+                this.addBreakpoint(file);
+                return true;
+            }
+        }
+
+        if (this.hasBreakpoint(file, line)) {
+            this.removeBreakpoint(file, line);
             return false;
         } else {
-            this.addBreakpoint(file, line);
+            this.addBreakpoint(file, line, fileId);
             return true;
         }
     }
 
     /**
      * Check if an active enabled breakpoint exists at file:line.
-     * @param {string} file
-     * @param {number} line
+     * @param {string|object} file
+     * @param {number} [line]
      * @returns {boolean}
      */
-    hasBreakpoint(file = 'main.py', line) {
+    hasBreakpoint(file = 'main.py', line = null) {
+        if (file && typeof file === 'object') {
+            const targetLine = typeof file.line === 'number' ? file.line : file.current_line;
+            if (!targetLine) return false;
+            for (const bp of this._breakpoints.values()) {
+                if (bp.matches(file, targetLine)) return true;
+            }
+            return false;
+        }
+
         if (!line) return false;
         const id = `${file || 'main.py'}:${line}`;
         const bp = this._breakpoints.get(id);
-        return Boolean(bp && bp.enabled);
+        if (bp && bp.enabled) return true;
+
+        for (const b of this._breakpoints.values()) {
+            if (b.matches(file, line)) return true;
+        }
+
+        return false;
     }
 
     /**
