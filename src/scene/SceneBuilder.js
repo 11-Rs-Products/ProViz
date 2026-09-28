@@ -33,7 +33,6 @@ export class SceneBuilder {
     build(runtimeState) {
         const sceneGraph = new SceneGraph({
             metadata: {
-                timestamp: Date.now(),
                 sourceLine: runtimeState?.currentSource?.line ?? null,
             },
         });

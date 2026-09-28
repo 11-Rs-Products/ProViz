@@ -1210,6 +1210,113 @@ footer {
   margin-top: 0.35rem;
 }
 
+/* --- Variables & Inspector Panel --- */
+.variables-panel {
+  background: rgba(2, 6, 23, 0.7);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  padding: 0.6rem;
+  max-height: 220px;
+  overflow-y: auto;
+  flex-shrink: 0;
+  margin-bottom: 0.5rem;
+}
+
+.inspector-tab {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.inspector-tab:hover {
+  background: rgba(255,255,255,0.1);
+  color: white;
+}
+
+.inspector-tab--active {
+  background: var(--accent-indigo);
+  color: white;
+  border-color: var(--accent-indigo);
+}
+
+.variables-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.var-card {
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+}
+
+.var-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.var-name {
+  color: #fcd34d;
+  font-weight: 600;
+}
+
+.var-ref-arrow {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.var-obj-id {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.var-val {
+  color: #86efac;
+  word-break: break-all;
+}
+
+.var-expand-toggle {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 0 0.2rem;
+}
+
+.var-details {
+  margin-top: 0.3rem;
+  padding-top: 0.3rem;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  font-size: 0.72rem;
+  color: var(--text-sub);
+}
+
+.var-element-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.1rem 0.4rem;
+  background: rgba(0,0,0,0.2);
+  border-radius: 4px;
+  margin-top: 0.2rem;
+}
+
 .cs-var {
   display: flex;
   gap: 0.25rem;

@@ -82,6 +82,8 @@ export class LegacyFrameAdapter {
             const frame = {
                 frame_id: frameId++,
                 source_event_ids: [ev.id],
+                file: ev.source?.file || 'main.py',
+                source: ev.source ? { ...ev.source } : { file: 'main.py', line: ev.source?.line ?? null, column: null },
                 current_line: ev.source?.line ?? null,
                 current_function: ev.scope?.function ?? '<module>',
                 event_type: ev.type === 'program_end' ? 'output' : ev.type,

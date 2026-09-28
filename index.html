@@ -492,6 +492,21 @@
             <div class="exp-secondary" id="exp-secondary"></div>
           </div>
 
+          <!-- Variables & Inspector Panel -->
+          <div id="variables-panel" class="variables-panel" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <div class="panel-label" style="margin-bottom: 0;">🔍 Variables &amp; Heap Explorer</div>
+              <div style="display: flex; gap: 0.25rem;">
+                <button id="tab-inspector-vars" class="inspector-tab inspector-tab--active" title="Variables View">Scope</button>
+                <button id="tab-inspector-heap" class="inspector-tab" title="Heap Explorer">Heap</button>
+              </div>
+            </div>
+            <div id="heap-search-box" style="display: none; margin-bottom: 0.5rem;">
+              <input type="text" id="heap-search-input" placeholder="Search heap objects, IDs, types..." style="width: 100%; padding: 0.3rem 0.6rem; border-radius: 4px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 0.75rem; font-family: var(--font-mono);">
+            </div>
+            <div id="variables-container" class="variables-container"></div>
+          </div>
+
           <!-- Call Stack Panel -->
           <div id="call-stack-panel" class="call-stack-panel" style="display: none;">
             <div class="panel-label">📚 Call Stack</div>

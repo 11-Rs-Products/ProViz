@@ -24,6 +24,8 @@ import { PythonExecutor }    from './src/engine/PythonExecutor.js';
 import { TraceTransformer }  from './src/engine/TraceTransformer.js';
 import { createExecutionRequest } from './src/trace/ExecutionRequest.js';
 import { PlaybackEngine }    from './src/PlaybackEngine.js';
+import { Debugger }          from './src/debugger/Debugger.js';
+import { EditorDebuggerAdapter } from './src/debugger/EditorDebuggerAdapter.js';
 import { ExplanationEngine } from './src/ExplanationEngine.js';
 import { BaseVisualizer }    from './src/visualizers/BaseVisualizer.js';
 import { VariableVisualizer }  from './src/visualizers/VariableVisualizer.js';
@@ -111,7 +113,9 @@ const callStackViz = new CallStackVisualizer(document.getElementById('call-stack
 const executor   = new PythonExecutor();
 const transformer = new TraceTransformer();
 const playback   = new PlaybackEngine();
+const debuggerCore = new Debugger({ playbackEngine: playback });
 const explainer  = new ExplanationEngine();
+let editorAdapter = null;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CodeMirror Setup
@@ -358,6 +362,10 @@ async function initApp() {
             state: EditorState.create({ doc: '', extensions: [basicSetup, python(), lineHighlightField] }),
             parent: document.getElementById('editor-container'),
         });
+        editorAdapter = new EditorDebuggerAdapter({
+            debuggerInstance: debuggerCore,
+            editorView: editor,
+        });
     }
 
     // Mode tabs
@@ -378,11 +386,11 @@ async function initApp() {
     // Wire buttons
     btnRun.addEventListener('click', runCode);
     btnReset.addEventListener('click', doReset);
-    btnNext.addEventListener('click', () => { playback.nextFrame(); });
-    btnPrev.addEventListener('click', () => { playback.prevFrame(); });
+    btnNext.addEventListener('click', () => { debuggerCore.stepForward(); });
+    btnPrev.addEventListener('click', () => { debuggerCore.stepBackward(); });
     btnPlayPause.addEventListener('click', togglePlayPause);
     btnRestart.addEventListener('click', () => {
-        playback.restart();
+        debuggerCore.restart();
         updateUI(null);
         setupScene(currentQuestion);
     });
@@ -403,10 +411,16 @@ async function initApp() {
         });
     }
 
+    // Debugger state change listener
+    debuggerCore.onStateChange((state) => {
+        renderVariablesPanel(state);
+    });
+
     // Playback engine listener
     playback.onFrameChange((frame, event) => {
         if (event === 'restart' || event === 'reset') {
             updateUI(null);
+            renderVariablesPanel(null);
             return;
         }
         if (event === 'end') {
@@ -531,10 +545,10 @@ async function runCode() {
         return;
     }
 
-    // Load trace into playback engine with StateReconstructor & checkpoints
-    playback.setFrames(trace, currentQuestion?.visualization || {});
+    // Load trace into debugger controller (which initializes PlaybackEngine with StateReconstructor & checkpoints)
+    debuggerCore.loadExecution(trace, currentQuestion?.visualization || {});
 
-    // Show playback controls
+    // Show playback controls and inspector panels
     playbackControls.style.display = 'block';
     const hasRecursion = frames.some(f => f.event_type === 'call' || f.event_type === 'return');
     callStackPanel.style.display = hasRecursion ? 'block' : 'none';
@@ -545,7 +559,7 @@ async function runCode() {
     // Auto-play visualization immediately!
     isPlayingBack = true;
     if (btnPlayPause) btnPlayPause.innerText = '⏸ Pause';
-    playback.play();
+    debuggerCore.run();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -646,9 +660,113 @@ function doReset() {
     playback.setFrames([]);
     playbackControls.style.display = 'none';
     callStackPanel.style.display = 'none';
+    const varPanel = document.getElementById('variables-panel');
+    if (varPanel) varPanel.style.display = 'none';
     if (btnPlayPause) btnPlayPause.innerText = '▶ Play';
 
     updateUI(null);
     highlightLine(0);
     if (currentQuestion) setupScene(currentQuestion);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Variables & Inspector Panel Rendering
+// ─────────────────────────────────────────────────────────────────────────────
+
+function renderVariablesPanel(debuggerState) {
+    const container = document.getElementById('variables-container');
+    const panel = document.getElementById('variables-panel');
+    if (!container || !panel) return;
+
+    if (!debuggerState || !debuggerState.runtimeState) {
+        panel.style.display = 'none';
+        container.innerHTML = '';
+        return;
+    }
+
+    const locals = debuggerState.activeLocals || {};
+    const keys = Object.keys(locals);
+    if (keys.length === 0) {
+        panel.style.display = 'none';
+        container.innerHTML = '';
+        return;
+    }
+
+    panel.style.display = 'block';
+    container.innerHTML = '';
+
+    const heap = debuggerState.runtimeState.heap;
+
+    for (const name of keys) {
+        const binding = locals[name];
+        const card = document.createElement('div');
+        card.className = 'var-card';
+
+        const row = document.createElement('div');
+        row.className = 'var-row';
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'var-name';
+        nameSpan.textContent = name;
+
+        row.appendChild(nameSpan);
+
+        if (binding && typeof binding === 'object' && binding.kind === 'reference') {
+            const objId = binding.objectId;
+            const obj = heap ? heap.getObject(objId) : null;
+
+            const arrowSpan = document.createElement('span');
+            arrowSpan.className = 'var-ref-arrow';
+            arrowSpan.textContent = ' → ';
+
+            const idSpan = document.createElement('span');
+            idSpan.className = 'var-obj-id';
+            idSpan.textContent = `${binding.type || obj?.type || 'object'} (${objId})`;
+
+            row.appendChild(arrowSpan);
+            row.appendChild(idSpan);
+
+            card.appendChild(row);
+
+            if (obj) {
+                const details = document.createElement('div');
+                details.className = 'var-details';
+
+                if (Array.isArray(obj.elements)) {
+                    details.textContent = `Length: ${obj.elements.length}`;
+                    obj.elements.forEach((elem, idx) => {
+                        const elemRow = document.createElement('div');
+                        elemRow.className = 'var-element-row';
+                        const displayVal = typeof elem === 'object' ? (elem.value ?? elem.objectId ?? JSON.stringify(elem)) : elem;
+                        elemRow.innerHTML = `<span style="color:#94a3b8;">[${idx}]</span> <span class="var-val">${displayVal}</span>`;
+                        details.appendChild(elemRow);
+                    });
+                } else if (obj.attributes) {
+                    Object.entries(obj.attributes).forEach(([k, v]) => {
+                        const elemRow = document.createElement('div');
+                        elemRow.className = 'var-element-row';
+                        const displayVal = typeof v === 'object' ? JSON.stringify(v) : v;
+                        elemRow.innerHTML = `<span style="color:#fcd34d;">${k}</span> <span class="var-val">${displayVal}</span>`;
+                        details.appendChild(elemRow);
+                    });
+                }
+                card.appendChild(details);
+            }
+        } else {
+            const valSpan = document.createElement('span');
+            valSpan.className = 'var-val';
+            const valStr = binding?.value !== undefined ? String(binding.value) : (typeof binding === 'object' ? JSON.stringify(binding) : String(binding));
+            valSpan.textContent = valStr;
+
+            const eqSpan = document.createElement('span');
+            eqSpan.className = 'var-ref-arrow';
+            eqSpan.textContent = ' = ';
+
+            row.appendChild(eqSpan);
+            row.appendChild(valSpan);
+            card.appendChild(row);
+        }
+
+        container.appendChild(card);
+    }
 }
