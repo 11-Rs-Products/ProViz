@@ -20,6 +20,10 @@ import { EvaluationContext } from '../inspection/EvaluationContext.js';
 import { DataflowAnalyzer } from '../dataflow/DataflowAnalyzer.js';
 import { DataflowQueries } from '../dataflow/DataflowQueries.js';
 import { DataflowSnapshot } from '../dataflow/DataflowSnapshot.js';
+import { ControlFlowAnalyzer } from '../analysis/ControlFlowAnalyzer.js';
+import { AnalysisQueries } from '../analysis/AnalysisQueries.js';
+import { TypeFlowAnalyzer } from '../typeflow/TypeFlowAnalyzer.js';
+import { TypeQueries } from '../typeflow/TypeQueries.js';
 
 export class Debugger {
     /**
@@ -53,6 +57,9 @@ export class Debugger {
     loadExecution(input, problemConfig = {}) {
         this._uetTrace = input && typeof input === 'object' && Array.isArray(input.events) ? input : null;
         this._playbackEngine.setFrames(input, problemConfig);
+        this._programAnalysis = null;
+        this._typeQueries = null;
+        this._dataflowGraph = null;
 
         this._exception = null;
         const total = this._playbackEngine.totalFrames;
@@ -772,6 +779,163 @@ export class Debugger {
         const idx = frameIndex !== null ? frameIndex : this._playbackEngine.currentIdx;
         const graph = this.getDataflowGraph();
         return DataflowSnapshot.capture(graph, idx);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Control-Flow, SSA & Program Slicing Analysis (Stage 13)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Lazily constructs and returns the AnalysisQueries engine for the current execution source.
+     * @param {string} [functionId='<module>']
+     * @returns {AnalysisQueries}
+     */
+    getProgramAnalysis(functionId = '<module>') {
+        if (!this._analysisQueries) {
+            const analyzer = new ControlFlowAnalyzer();
+            const sourceCode = this._uetTrace?.source?.files?.['main.py'] || this._playbackEngine.frames?.[0]?.source_code || '';
+            const analysis = analyzer.analyzeSource(sourceCode, { functionId });
+            this._analysisQueries = new AnalysisQueries({
+                ...analysis,
+                dataflowGraph: this.getDataflowGraph(),
+            });
+        }
+        return this._analysisQueries;
+    }
+
+    getControlFlow(functionId = '<module>') {
+        return this.getProgramAnalysis(functionId).getControlFlow();
+    }
+
+    getSSA(functionId = '<module>') {
+        return this.getProgramAnalysis(functionId).getSSA();
+    }
+
+    getDominators(nodeId) {
+        return this.getProgramAnalysis().getDominators(nodeId);
+    }
+
+    getReachingDefinitions(nodeId) {
+        return this.getProgramAnalysis().getReachingDefinitions(nodeId);
+    }
+
+    getBackwardSlice(criterion, options = {}) {
+        return this.getProgramAnalysis().getBackwardSlice(criterion, options);
+    }
+
+    getForwardSlice(criterion, options = {}) {
+        return this.getProgramAnalysis().getForwardSlice(criterion, options);
+    }
+
+    getDynamicSlice(criterion, frameIndex = null, options = {}) {
+        const idx = frameIndex !== null ? frameIndex : this._playbackEngine.currentIdx;
+        return this.getProgramAnalysis().getDynamicSlice(criterion, idx, options);
+    }
+
+    explainBranch(conditionNodeId, observedValue = null) {
+        return this.getProgramAnalysis().explainBranch({
+            conditionNodeId,
+            observedValue,
+            frameIndex: this._playbackEngine.currentIdx,
+        });
+    }
+
+    explainUnreachable(nodeId) {
+        return this.getProgramAnalysis().explainUnreachable(nodeId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Stage 14 Static Type & Value-Flow Analysis
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    getTypeAnalysis(functionId = '<module>') {
+        if (!this._typeQueries) {
+            const analyzer = new TypeFlowAnalyzer();
+            const sourceCode = this._uetTrace?.source?.files?.['main.py'] || this._uetTrace?.source?.code || this._playbackEngine.frames?.[0]?.source_code || '';
+            const analysis = analyzer.analyzeSource(sourceCode, { functionId });
+            this._typeQueries = new TypeQueries({
+                inference: analysis.inference,
+                cfg: analysis.cfg,
+                typeFlowGraph: analysis.typeFlowGraph,
+            });
+        }
+        return this._typeQueries;
+    }
+
+    getStaticType(target, nodeId = null) {
+        return this.getTypeAnalysis().getType(target, nodeId);
+    }
+
+    getPossibleTypes(target, nodeId = null) {
+        return this.getTypeAnalysis().getTypes(target, nodeId);
+    }
+
+    getAbstractValue(target, nodeId = null) {
+        return this.getTypeAnalysis().getAbstractValue(target, nodeId);
+    }
+
+    getTypeDiagnostics(nodeId = null) {
+        return this.getTypeAnalysis().getDiagnostics(nodeId);
+    }
+
+    explainType(target, nodeId = null) {
+        return this.getTypeAnalysis().explainType(target, nodeId);
+    }
+
+    getCurrentTypeState() {
+        const targetNode = this.getCurrentControlFlowNode();
+        return this.getTypeAnalysis().inference.nodeStates.get(targetNode?.id) || null;
+    }
+
+    getWatchType(watchId, frameIndex = null) {
+        const watch = this.getWatchManager().get(watchId);
+        if (!watch) return null;
+        const target = typeof watch.expression === 'string'
+            ? watch.expression
+            : (watch.expression?.source || watch.expression?.normalized || String(watch.expression));
+        const staticVal = this.getAbstractValue(target);
+        const idx = frameIndex !== null ? frameIndex : (this._playbackEngine.currentIdx >= 0 ? this._playbackEngine.currentIdx : 0);
+        const event = this._uetTrace?.events?.[idx] || this._playbackEngine?.getCurrentFrame();
+        const state = (event && event.runtimeState)
+            || (this._playbackEngine?.reconstructor ? this._playbackEngine.reconstructor.reconstruct(idx) : null)
+            || this._playbackEngine?.getCurrentRuntimeState();
+        const observedVal = state?.getVariable?.(target)
+            || state?.globals?.getBinding?.(target)
+            || state?.globals?.bindings?.[target]
+            || state?.globals?.[target]
+            || event?.runtimeState?.globals?.getBinding?.(target)
+            || event?.runtimeState?.globals?.bindings?.[target]
+            || event?.runtimeState?.globals?.[target]
+            || event?.data?.globals?.[target]
+            || null;
+
+        let observedType = null;
+        let observedValue = null;
+
+        if (observedVal) {
+            observedType = observedVal.type || (typeof observedVal === 'object' && 'value' in observedVal ? 'int' : typeof observedVal);
+            observedValue = observedVal.value !== undefined ? observedVal.value : observedVal;
+        }
+
+        return {
+            watchId,
+            target,
+            staticTypes: staticVal.typeSet.toArray().map(t => t.toString()),
+            nullability: staticVal.nullability,
+            constant: staticVal.getConstant()?.raw || null,
+            observedType,
+            observedValue,
+            confidence: staticVal.confidence,
+        };
+    }
+
+    explainWatchType(watchId, frameIndex = null) {
+        const info = this.getWatchType(watchId, frameIndex);
+        if (!info) return null;
+        return {
+            ...info,
+            summary: `Watch '${info.target}' static types: [${info.staticTypes.join(', ')}], runtime observed: '${info.observedType}' (${info.observedValue}).`,
+        };
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
