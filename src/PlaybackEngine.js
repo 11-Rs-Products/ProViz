@@ -10,12 +10,18 @@
 import { StateReconstructor } from './playback/StateReconstructor.js';
 import { Timeline } from './playback/Timeline.js';
 import { SceneBuilder } from './scene/SceneBuilder.js';
+import { SceneDiff } from './scene/SceneDiff.js';
+import { TransitionPlanner } from './scene/SemanticTransition.js';
+import { AnimationBuilder } from './animation/AnimationBuilder.js';
+import { LayoutBuilder } from './layout/LayoutBuilder.js';
 
 export class PlaybackEngine {
     constructor() {
         this._reconstructor = null;
         this._timeline = new Timeline();
         this._sceneBuilder = new SceneBuilder();
+        this._animationBuilder = new AnimationBuilder();
+        this._layoutBuilder = new LayoutBuilder();
         this._currentIdx = -1;
         this._playing = false;
         this._playTimer = null;
@@ -208,6 +214,137 @@ export class PlaybackEngine {
         if (!this._reconstructor) return null;
         const state = this._reconstructor.reconstruct(idx);
         return state ? this._sceneBuilder.build(state) : null;
+    }
+
+    /**
+     * Compute the structural SceneDiff between two frame indices without altering playback position.
+     * Works for adjacent, non-adjacent, forward, and reverse frame transitions.
+     *
+     * @param {number} fromIdx
+     * @param {number} toIdx
+     * @returns {import('./scene/SceneDiff.js').SceneDiff|null}
+     */
+    getSceneDiff(fromIdx, toIdx) {
+        if (!this._reconstructor) return null;
+        const fromScene = this.getSceneAt(fromIdx);
+        const toScene = this.getSceneAt(toIdx);
+        return SceneDiff.compute(fromScene, toScene, {
+            fromFrame: fromIdx,
+            toFrame: toIdx,
+        });
+    }
+
+    /**
+     * Compute the SemanticTransitionPlan between two frame indices.
+     *
+     * @param {number} fromIdx
+     * @param {number} toIdx
+     * @returns {import('./scene/SemanticTransition.js').SemanticTransitionPlan|null}
+     */
+    getTransition(fromIdx, toIdx) {
+        if (!this._reconstructor) return null;
+        const fromScene = this.getSceneAt(fromIdx);
+        const toScene = this.getSceneAt(toIdx);
+        return TransitionPlanner.computeTransition(fromScene, toScene, {
+            fromFrame: fromIdx,
+            toFrame: toIdx,
+        });
+    }
+
+    /**
+     * Compute the semantic transition for the current playback step (from currentIdx - 1 to currentIdx).
+     * @returns {import('./scene/SemanticTransition.js').SemanticTransitionPlan|null}
+     */
+    getCurrentTransition() {
+        if (this._currentIdx <= 0) {
+            return this.getTransition(0, 0);
+        }
+        return this.getTransition(this._currentIdx - 1, this._currentIdx);
+    }
+
+    /**
+     * Construct a deterministic AnimationPlan between two frames.
+     *
+     * @param {number} fromIdx
+     * @param {number} toIdx
+     * @param {object} [options={}]
+     * @returns {import('./animation/AnimationPlan.js').AnimationPlan|null}
+     */
+    getAnimationPlan(fromIdx, toIdx, options = {}) {
+        const transition = this.getTransition(fromIdx, toIdx);
+        if (!transition) return null;
+        return this._animationBuilder.build(transition, {
+            fromFrame: fromIdx,
+            toFrame: toIdx,
+            ...options,
+        });
+    }
+
+    /**
+     * Get AnimationPlan for the current playback step.
+     *
+     * @param {object} [options={}]
+     * @returns {import('./animation/AnimationPlan.js').AnimationPlan|null}
+     */
+    getCurrentAnimationPlan(options = {}) {
+        const transition = this.getCurrentTransition();
+        if (!transition) return null;
+        return this._animationBuilder.build(transition, options);
+    }
+
+    /**
+     * Create animation plan (alias for getAnimationPlan).
+     *
+     * @param {number} fromIdx
+     * @param {number} toIdx
+     * @param {object} [options={}]
+     * @returns {import('./animation/AnimationPlan.js').AnimationPlan|null}
+     */
+    createAnimation(fromIdx, toIdx, options = {}) {
+        return this.getAnimationPlan(fromIdx, toIdx, options);
+    }
+
+    /**
+     * Compute LayoutState at a specific frame index.
+     *
+     * @param {number} frameIdx
+     * @param {import('./layout/LayoutState.js').LayoutState|null} [previousLayout=null]
+     * @param {object} [options={}]
+     * @returns {import('./layout/LayoutState.js').LayoutState|null}
+     */
+    getLayout(frameIdx, previousLayout = null, options = {}) {
+        const scene = this.getSceneAt(frameIdx);
+        if (!scene) return null;
+        return this._layoutBuilder.build(scene, previousLayout, {
+            frameIndex: frameIdx,
+            ...options,
+        });
+    }
+
+    /**
+     * Compute LayoutState for the current frame index.
+     *
+     * @param {object} [options={}]
+     * @returns {import('./layout/LayoutState.js').LayoutState|null}
+     */
+    getCurrentLayout(options = {}) {
+        if (this._currentIdx < 0) return null;
+        return this.getLayout(this._currentIdx, null, options);
+    }
+
+    /**
+     * Compute spatial layout transition between two frame indices.
+     *
+     * @param {number} fromIdx
+     * @param {number} toIdx
+     * @param {object} [options={}]
+     * @returns {{ prevLayout: import('./layout/LayoutState.js').LayoutState|null, nextLayout: import('./layout/LayoutState.js').LayoutState|null, diff: object }}
+     */
+    getLayoutTransition(fromIdx, toIdx, options = {}) {
+        const prevLayout = this.getLayout(fromIdx, null, options);
+        const nextLayout = this.getLayout(toIdx, prevLayout, options);
+        const diff = this._layoutBuilder.diff(prevLayout, nextLayout);
+        return { prevLayout, nextLayout, diff };
     }
 
     getProgress() {
