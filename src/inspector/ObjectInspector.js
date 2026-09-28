@@ -518,4 +518,42 @@ export class ObjectInspector {
 
         return Array.from(vars);
     }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Dataflow & Dependency Delegation (Stage 12)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    setDataflowQueries(dataflowQueries) {
+        this._dataflowQueries = dataflowQueries;
+    }
+
+    getObjectOrigins(objectId, frameIndex = null) {
+        if (!this._dataflowQueries) return { origins: [], path: [] };
+        return this._dataflowQueries.findOrigins(objectId, frameIndex ?? Infinity);
+    }
+
+    getObjectDependents(objectId, frameIndex = null) {
+        if (!this._dataflowQueries) return { dependents: [], sourceLocations: [] };
+        return this._dataflowQueries.findDependents(objectId, frameIndex ?? 0);
+    }
+
+    getObjectMutations(objectId, frameRange = {}) {
+        if (!this._dataflowQueries) return [];
+        return this._dataflowQueries.findMutations(objectId, frameRange);
+    }
+
+    getObjectAliases(objectId, frameIndex = null) {
+        if (!this._dataflowQueries) return this._getBoundVariables(objectId);
+        return this._dataflowQueries.findAliases(objectId, frameIndex);
+    }
+
+    getObjectDataflow(objectId, frameIndex = null) {
+        return {
+            objectId,
+            aliases: this.getObjectAliases(objectId, frameIndex),
+            mutations: this.getObjectMutations(objectId),
+            origins: this.getObjectOrigins(objectId, frameIndex),
+            dependents: this.getObjectDependents(objectId, frameIndex),
+        };
+    }
 }

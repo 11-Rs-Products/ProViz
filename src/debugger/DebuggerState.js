@@ -23,6 +23,8 @@ export class DebuggerState {
      * @param {string} [params.reason='idle'] - 'idle' | 'step' | 'breakpoint' | 'exception' | 'program_end' | 'jump' | 'restart' | 'run' | 'pause'
      * @param {object|null} [params.exception=null] - Exception details if error state
      * @param {Array<import('./Breakpoint.js').Breakpoint>} [params.breakpoints=[]] - Active breakpoints list
+     * @param {Array<import('../inspection/WatchExpression.js').WatchExpression>} [params.watches=[]] - Active watch expressions
+     * @param {Record<string, import('../inspection/EvaluationResult.js').EvaluationResult>} [params.watchResults={}] - Evaluated watch results map
      */
     constructor({
         status = 'idle',
@@ -35,6 +37,8 @@ export class DebuggerState {
         reason = 'idle',
         exception = null,
         breakpoints = [],
+        watches = [],
+        watchResults = {},
     } = {}) {
         this.status = status;
         this.frameIndex = frameIndex;
@@ -56,6 +60,8 @@ export class DebuggerState {
         this.reason = reason;
         this.exception = exception ? { ...exception } : null;
         this.breakpoints = Array.isArray(breakpoints) ? breakpoints.map(b => b.clone ? b.clone() : { ...b }) : [];
+        this.watches = Array.isArray(watches) ? watches.map(w => w.clone ? w.clone() : { ...w }) : [];
+        this.watchResults = { ...watchResults };
     }
 
     /**
@@ -100,6 +106,8 @@ export class DebuggerState {
             activeLocalsKeys: Object.keys(this.activeLocals),
             hasSceneGraph: Boolean(this.sceneGraph),
             hasRuntimeState: Boolean(this.runtimeState),
+            watchCount: this.watches.length,
+            watchResults: this.watchResults,
         };
     }
 }

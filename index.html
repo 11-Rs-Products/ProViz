@@ -495,14 +495,29 @@
           <!-- Variables & Inspector Panel -->
           <div id="variables-panel" class="variables-panel" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-              <div class="panel-label" style="margin-bottom: 0;">🔍 Variables &amp; Heap Explorer</div>
+              <div class="panel-label" style="margin-bottom: 0;">🔍 Inspector &amp; Dataflow</div>
               <div style="display: flex; gap: 0.25rem;">
                 <button id="tab-inspector-vars" class="inspector-tab inspector-tab--active" title="Variables View">Scope</button>
                 <button id="tab-inspector-heap" class="inspector-tab" title="Heap Explorer">Heap</button>
+                <button id="tab-inspector-watches" class="inspector-tab" title="Watch Expressions">Watches</button>
+                <button id="tab-inspector-dataflow" class="inspector-tab" title="Dataflow &amp; Dependencies">Dataflow</button>
               </div>
             </div>
             <div id="heap-search-box" style="display: none; margin-bottom: 0.5rem;">
               <input type="text" id="heap-search-input" placeholder="Search heap objects, IDs, types..." style="width: 100%; padding: 0.3rem 0.6rem; border-radius: 4px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 0.75rem; font-family: var(--font-mono);">
+            </div>
+            <div id="watch-input-box" style="display: none; margin-bottom: 0.5rem;">
+              <div style="display: flex; gap: 0.3rem;">
+                <input type="text" id="watch-new-input" placeholder="Add expression (e.g. user.name, items[0], a is b)..." style="flex: 1; padding: 0.3rem 0.6rem; border-radius: 4px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 0.75rem; font-family: var(--font-mono);">
+                <button id="btn-add-watch" style="padding: 0.3rem 0.6rem; background: var(--accent-indigo); color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-weight: 600;">+ Add</button>
+              </div>
+            </div>
+            <div id="dataflow-controls-box" style="display: none; margin-bottom: 0.5rem;">
+              <div style="display: flex; gap: 0.3rem;">
+                <input type="text" id="dataflow-target-input" placeholder="Target variable or object (e.g. x, total, obj_1)..." style="flex: 1; padding: 0.3rem 0.6rem; border-radius: 4px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 0.75rem; font-family: var(--font-mono);">
+                <button id="btn-df-origin" style="padding: 0.3rem 0.5rem; background: var(--accent-indigo); color: white; border: none; border-radius: 4px; font-size: 0.7rem; cursor: pointer; font-weight: 600;">Origins</button>
+                <button id="btn-df-dependents" style="padding: 0.3rem 0.5rem; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; font-size: 0.7rem; cursor: pointer; font-weight: 600;">Impact</button>
+              </div>
             </div>
             <div id="variables-container" class="variables-container"></div>
           </div>

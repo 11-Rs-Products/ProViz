@@ -15,14 +15,21 @@
 import { PlaybackEngine } from '../PlaybackEngine.js';
 import { DebuggerState } from './DebuggerState.js';
 import { Breakpoint } from './Breakpoint.js';
+import { WatchManager } from '../inspection/WatchManager.js';
+import { EvaluationContext } from '../inspection/EvaluationContext.js';
+import { DataflowAnalyzer } from '../dataflow/DataflowAnalyzer.js';
+import { DataflowQueries } from '../dataflow/DataflowQueries.js';
+import { DataflowSnapshot } from '../dataflow/DataflowSnapshot.js';
 
 export class Debugger {
     /**
      * @param {object} [params]
      * @param {PlaybackEngine} [params.playbackEngine] - Optional external PlaybackEngine instance
+     * @param {WatchManager} [params.watchManager] - Optional external WatchManager instance
      */
-    constructor({ playbackEngine = null } = {}) {
+    constructor({ playbackEngine = null, watchManager = null } = {}) {
         this._playbackEngine = playbackEngine || new PlaybackEngine();
+        this._watchManager = watchManager || new WatchManager();
         this._breakpoints = new Map(); // id -> Breakpoint
         this._status = 'idle'; // 'idle' | 'running' | 'paused' | 'completed' | 'error'
         this._reason = 'idle'; // 'idle' | 'step' | 'breakpoint' | 'exception' | 'program_end' | 'jump' | 'restart' | 'run' | 'pause'
@@ -111,6 +118,20 @@ export class Debugger {
             };
         }
 
+        // Evaluate active watch expressions
+        const watches = this._watchManager.getAll();
+        const watchResults = {};
+        if (runtimeState && watches.length > 0) {
+            const ctx = EvaluationContext.fromRuntimeState(runtimeState, {
+                frameIndex: frameIndex < 0 && totalFrames > 0 ? 0 : frameIndex,
+                fileId: sourceLocation.fileId,
+                moduleId: sourceLocation.moduleId,
+            });
+            for (const [id, res] of this._watchManager.evaluateAll(ctx).entries()) {
+                watchResults[id] = res;
+            }
+        }
+
         return new DebuggerState({
             status: this._status,
             frameIndex: frameIndex < 0 && totalFrames > 0 ? 0 : frameIndex,
@@ -122,6 +143,8 @@ export class Debugger {
             reason: this._reason,
             exception: exc,
             breakpoints: this.getBreakpoints(),
+            watches,
+            watchResults,
         });
     }
 
@@ -519,6 +542,236 @@ export class Debugger {
     clearBreakpoints() {
         this._breakpoints.clear();
         this._notify(this.getDebuggerState());
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Watch Expressions & Interactive Inspection
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Evaluates an expression against the current debugger state.
+     * @param {string|import('../inspection/Expression.js').Expression} expression
+     * @returns {import('../inspection/EvaluationResult.js').EvaluationResult}
+     */
+    evaluate(expression) {
+        const state = this.getDebuggerState();
+        const ctx = EvaluationContext.fromDebuggerState(state);
+        return this._watchManager.evaluator.evaluate(expression, ctx);
+    }
+
+    /**
+     * Evaluates an expression at an arbitrary historical frame without re-running code.
+     * @param {string|import('../inspection/Expression.js').Expression} expression
+     * @param {number} frameIndex
+     * @returns {import('../inspection/EvaluationResult.js').EvaluationResult}
+     */
+    evaluateAt(expression, frameIndex) {
+        if (frameIndex === this._playbackEngine.currentIdx) {
+            return this.evaluate(expression);
+        }
+
+        const runtimeState = this._playbackEngine.reconstructor
+            ? this._playbackEngine.reconstructor.reconstruct(frameIndex)
+            : this._playbackEngine.getCurrentRuntimeState();
+
+        const ctx = EvaluationContext.fromRuntimeState(runtimeState, { frameIndex });
+        return this._watchManager.evaluator.evaluate(expression, ctx);
+    }
+
+    /**
+     * Adds a persistent watch expression.
+     * @param {string|import('../inspection/Expression.js').Expression} expression
+     * @param {object} [options]
+     * @returns {import('../inspection/WatchExpression.js').WatchExpression}
+     */
+    addWatch(expression, options = {}) {
+        const watch = this._watchManager.add(expression, options);
+        this._notify(this.getDebuggerState());
+        return watch;
+    }
+
+    /**
+     * Removes a watch expression by ID.
+     * @param {string} id
+     * @returns {boolean}
+     */
+    removeWatch(id) {
+        const removed = this._watchManager.remove(id);
+        if (removed) {
+            this._notify(this.getDebuggerState());
+        }
+        return removed;
+    }
+
+    /**
+     * Toggles a watch expression enabled state.
+     * @param {string} id
+     * @returns {boolean|null}
+     */
+    toggleWatch(id) {
+        const state = this._watchManager.toggle(id);
+        if (state !== null) {
+            this._notify(this.getDebuggerState());
+        }
+        return state;
+    }
+
+    /**
+     * Updates an existing watch expression.
+     * @param {string} id
+     * @param {string|import('../inspection/Expression.js').Expression} newExpression
+     * @returns {import('../inspection/WatchExpression.js').WatchExpression|null}
+     */
+    updateWatch(id, newExpression) {
+        const watch = this._watchManager.update(id, newExpression);
+        if (watch) {
+            this._notify(this.getDebuggerState());
+        }
+        return watch;
+    }
+
+    /**
+     * Returns all active watch expressions.
+     * @returns {Array<import('../inspection/WatchExpression.js').WatchExpression>}
+     */
+    getWatches() {
+        return this._watchManager.getAll();
+    }
+
+    /**
+     * Returns the underlying WatchManager instance.
+     * @returns {WatchManager}
+     */
+    getWatchManager() {
+        return this._watchManager;
+    }
+
+    /**
+     * Evaluates all enabled watches against current debugger state.
+     * @returns {Record<string, import('../inspection/EvaluationResult.js').EvaluationResult>}
+     */
+    evaluateWatches() {
+        const state = this.getDebuggerState();
+        const ctx = EvaluationContext.fromDebuggerState(state);
+        return this._watchManager.evaluateAllAsDict(ctx);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Dataflow & Program Dependency Graph (PDG) (Stage 12)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Lazily constructs and returns the canonical DataflowGraph for the current execution.
+     * @returns {import('../dataflow/DataflowGraph.js').DataflowGraph}
+     */
+    getDataflowGraph() {
+        if (!this._dataflowGraph) {
+            const analyzer = new DataflowAnalyzer();
+            const events = this._uetTrace?.events || this._playbackEngine.frames || [];
+            this._dataflowGraph = analyzer.analyze(this._uetTrace || { events });
+            this._dataflowQueries = new DataflowQueries(this._dataflowGraph);
+        }
+        return this._dataflowGraph;
+    }
+
+    /**
+     * Returns the DataflowQueries engine over current execution graph.
+     * @returns {DataflowQueries}
+     */
+    getDataflowQueries() {
+        if (!this._dataflowQueries) {
+            this.getDataflowGraph();
+        }
+        return this._dataflowQueries;
+    }
+
+    /**
+     * Discovers definition(s) for a variable at or up to a specific frame.
+     */
+    getDefinition(target, frameIndex = null) {
+        const idx = frameIndex !== null ? frameIndex : this._playbackEngine.currentIdx;
+        const q = this.getDataflowQueries();
+        return q.findLastDefinition(target, idx) || q.findDefinition(target, idx);
+    }
+
+    /**
+     * Discovers uses for a variable.
+     */
+    getUses(target, frameIndex = null) {
+        const idx = frameIndex !== null ? frameIndex : this._playbackEngine.currentIdx;
+        return this.getDataflowQueries().findUses(target, idx);
+    }
+
+    /**
+     * "Where did this value come from?"
+     */
+    getOrigins(target, frameIndex = null) {
+        const idx = frameIndex !== null ? frameIndex : this._playbackEngine.currentIdx;
+        return this.getDataflowQueries().findOrigins(target, idx);
+    }
+
+    /**
+     * "What depends on this value?"
+     */
+    getDependents(target, frameIndex = null) {
+        const idx = frameIndex !== null ? frameIndex : this._playbackEngine.currentIdx;
+        return this.getDataflowQueries().findDependents(target, idx);
+    }
+
+    /**
+     * Computes the total impact set of a variable or object.
+     */
+    getImpact(target, frameIndex = null) {
+        const idx = frameIndex !== null ? frameIndex : this._playbackEngine.currentIdx;
+        return this.getDataflowQueries().findImpact(target, idx);
+    }
+
+    /**
+     * Discovers all aliases pointing to a heap object.
+     */
+    getAliases(objectId, frameIndex = null) {
+        const idx = frameIndex !== null ? frameIndex : this._playbackEngine.currentIdx;
+        return this.getDataflowQueries().findAliases(objectId, idx);
+    }
+
+    /**
+     * Retrieves mutations applied to an object.
+     */
+    getMutations(objectId, frameRange = {}) {
+        return this.getDataflowQueries().findMutations(objectId, frameRange);
+    }
+
+    /**
+     * Finds the shortest semantic data path between two nodes.
+     */
+    findDataPath(from, to, limits = {}) {
+        return this.getDataflowQueries().findDataPath(from, to, limits);
+    }
+
+    /**
+     * Explains why a watch expression changed value across frames.
+     */
+    explainWatchChange(watchIdOrExpr, fromFrame, toFrame) {
+        const watch = this._watchManager.get(watchIdOrExpr);
+        const expr = watch?.expression?.source || watchIdOrExpr;
+        const fromRes = this.evaluateAt(expr, fromFrame);
+        const toRes = this.evaluateAt(expr, toFrame);
+        return this.getDataflowQueries().explainWatchChange({
+            expression: expr,
+            fromFrame,
+            toFrame,
+            fromValue: fromRes?.value ?? null,
+            toValue: toRes?.value ?? null,
+        });
+    }
+
+    /**
+     * Captures an immutable DataflowSnapshot at the given frame.
+     */
+    getDataflowSnapshot(frameIndex = null) {
+        const idx = frameIndex !== null ? frameIndex : this._playbackEngine.currentIdx;
+        const graph = this.getDataflowGraph();
+        return DataflowSnapshot.capture(graph, idx);
     }
 
     // ─────────────────────────────────────────────────────────────────────────────

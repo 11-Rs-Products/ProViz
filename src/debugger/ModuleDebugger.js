@@ -322,4 +322,92 @@ export class ModuleDebugger {
     onStateChange(fn) {
         this.debugger.onStateChange(fn);
     }
+
+    evaluate(expression) {
+        return this.debugger.evaluate(expression);
+    }
+
+    evaluateAt(expression, frameIndex) {
+        return this.debugger.evaluateAt(expression, frameIndex);
+    }
+
+    addWatch(expression, options = {}) {
+        return this.debugger.addWatch(expression, options);
+    }
+
+    removeWatch(id) {
+        return this.debugger.removeWatch(id);
+    }
+
+    toggleWatch(id) {
+        return this.debugger.toggleWatch(id);
+    }
+
+    updateWatch(id, newExpression) {
+        return this.debugger.updateWatch(id, newExpression);
+    }
+
+    getWatches() {
+        return this.debugger.getWatches();
+    }
+
+    getWatchManager() {
+        return this.debugger.getWatchManager();
+    }
+
+    evaluateWatches() {
+        return this.debugger.evaluateWatches();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Dataflow Delegations (Stage 12)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    getDataflowGraph() {
+        return this.debugger.getDataflowGraph();
+    }
+
+    getDataflowQueries() {
+        return this.debugger.getDataflowQueries();
+    }
+
+    getDefinition(target, frameIndex = null) {
+        return this.debugger.getDefinition(target, frameIndex);
+    }
+
+    getUses(target, frameIndex = null) {
+        return this.debugger.getUses(target, frameIndex);
+    }
+
+    getOrigins(target, frameIndex = null) {
+        return this.debugger.getOrigins(target, frameIndex);
+    }
+
+    getDependents(target, frameIndex = null) {
+        return this.debugger.getDependents(target, frameIndex);
+    }
+
+    getImpact(target, frameIndex = null) {
+        return this.debugger.getImpact(target, frameIndex);
+    }
+
+    getAliases(objectId, frameIndex = null) {
+        return this.debugger.getAliases(objectId, frameIndex);
+    }
+
+    getMutations(objectId, frameRange = {}) {
+        return this.debugger.getMutations(objectId, frameRange);
+    }
+
+    findDataPath(from, to, limits = {}) {
+        return this.debugger.findDataPath(from, to, limits);
+    }
+
+    explainWatchChange(watchIdOrExpr, fromFrame, toFrame) {
+        return this.debugger.explainWatchChange(watchIdOrExpr, fromFrame, toFrame);
+    }
+
+    getDataflowSnapshot(frameIndex = null) {
+        return this.debugger.getDataflowSnapshot(frameIndex);
+    }
 }
