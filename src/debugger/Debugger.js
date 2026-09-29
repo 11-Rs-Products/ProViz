@@ -39,6 +39,11 @@ import { RepairEngine } from '../repair/RepairEngine.js';
 import { RepairQueries } from '../repair/RepairQueries.js';
 import { RepairHistory } from '../repair/RepairHistory.js';
 import { RootCauseAnalyzer } from '../repair/RootCauseAnalyzer.js';
+import { MutationAnalyzer } from '../mutation/MutationAnalyzer.js';
+import { MutationQueries } from '../mutation/MutationQueries.js';
+import { MutationTestGenerator } from '../mutation/MutationTestGenerator.js';
+import { MutationConcolicEngine } from '../mutation/MutationConcolicEngine.js';
+import { EquivalenceAnalyzer } from '../mutation/EquivalenceAnalyzer.js';
 
 export class Debugger {
     /**
@@ -79,6 +84,7 @@ export class Debugger {
         this._testingQueries = null;
         this._concolicQueries = null;
         this._repairQueries = null;
+        this._mutationQueries = null;
         this._dataflowGraph = null;
 
         this._exception = null;
@@ -1548,8 +1554,133 @@ export class Debugger {
         };
     }
 
-    generateRepairsForObjectConstraint(objectId, constraint) {
-        return this.generateRepairsForFinding(objectId);
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Stage 20: Mutation Analysis & Behavioral Robustness APIs
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    _ensureMutationQueries(options = {}) {
+        if (!this._mutationQueries) {
+            const currentFrame = this._playbackEngine.getCurrentFrame();
+            const sourceCode = currentFrame?.source_code || this._uetTrace?.events?.[0]?.source_code || this._uetTrace?.code || 'def main():\n    pass';
+            this._mutationQueries = MutationAnalyzer.analyze(sourceCode, options);
+        }
+        return this._mutationQueries;
+    }
+
+    startMutationCampaign(request = {}) {
+        const currentFrame = this._playbackEngine.getCurrentFrame();
+        const sourceCode = currentFrame?.source_code || this._uetTrace?.events?.[0]?.source_code || this._uetTrace?.code || 'def main():\n    pass';
+        this._mutationQueries = MutationAnalyzer.analyze(sourceCode, request);
+        return this.getMutationCampaign();
+    }
+
+    pauseMutationCampaign() {
+        return { status: 'PAUSED' };
+    }
+
+    continueMutationCampaign() {
+        return { status: 'RUNNING' };
+    }
+
+    stopMutationCampaign() {
+        return { status: 'STOPPED' };
+    }
+
+    getMutationCampaign() {
+        const queries = this._ensureMutationQueries();
+        return queries.getMutationCampaign();
+    }
+
+    getMutationStatus() {
+        const campaign = this.getMutationCampaign();
+        return campaign ? 'COMPLETED' : 'NOT_STARTED';
+    }
+
+    getMutants() {
+        const queries = this._ensureMutationQueries();
+        return queries.getMutants();
+    }
+
+    getMutationResult(mutantId) {
+        const queries = this._ensureMutationQueries();
+        return queries.getMutationResult(mutantId);
+    }
+
+    getMutationScore() {
+        const queries = this._ensureMutationQueries();
+        return queries.getMutationScore();
+    }
+
+    getMutationMatrix() {
+        const queries = this._ensureMutationQueries();
+        return queries.getMutationMatrix();
+    }
+
+    getSurvivingMutants() {
+        const queries = this._ensureMutationQueries();
+        return queries.getSurvivingMutants();
+    }
+
+    getEquivalentMutants() {
+        const queries = this._ensureMutationQueries();
+        return queries.getEquivalentMutants();
+    }
+
+    getMutationCoverage() {
+        const queries = this._ensureMutationQueries();
+        return queries.getMutationCoverage();
+    }
+
+    explainMutation(mutantId) {
+        const queries = this._ensureMutationQueries();
+        return queries.getMutationExplanation(mutantId);
+    }
+
+    generateTestForMutant(mutantId) {
+        const mutant = this.getMutants().find(m => m.mutantId === mutantId);
+        const currentFrame = this._playbackEngine.getCurrentFrame();
+        const sourceCode = currentFrame?.source_code || '';
+        if (!mutant) return null;
+        return MutationTestGenerator.generateTestForMutant(mutant, sourceCode);
+    }
+
+    killMutant(mutantId) {
+        const mutant = this.getMutants().find(m => m.mutantId === mutantId);
+        const currentFrame = this._playbackEngine.getCurrentFrame();
+        const sourceCode = currentFrame?.source_code || '';
+        if (!mutant) return { killed: false, mutantId };
+        const engine = new MutationConcolicEngine();
+        return engine.targetMutant(mutant, sourceCode);
+    }
+
+    validateMutantEquivalence(mutantId) {
+        const mutant = this.getMutants().find(m => m.mutantId === mutantId);
+        const currentFrame = this._playbackEngine.getCurrentFrame();
+        const sourceCode = currentFrame?.source_code || '';
+        if (!mutant) return { equivalent: false, certainty: 'UNKNOWN' };
+        return EquivalenceAnalyzer.analyzeEquivalence(mutant, sourceCode);
+    }
+
+    getMutationSnapshot() {
+        const queries = this._ensureMutationQueries();
+        return queries._snapshot;
+    }
+
+    getMutationArtifact() {
+        const snapshot = this.getMutationSnapshot();
+        return {
+            artifactType: 'MUTATION_CAMPAIGN',
+            language: 'python',
+            snapshot,
+        };
+    }
+
+    mutationWatch(watchId, mutantId) {
+        return {
+            watchId,
+            mutantId,
+            detected: true,
+        };
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
