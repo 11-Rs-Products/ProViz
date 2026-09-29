@@ -104,6 +104,14 @@ export class WorkspaceSnapshot {
     }
 
     /**
+     * Alias for getFiles.
+     * @returns {Array<SourceFile>}
+     */
+    getAllFiles() {
+        return this.getFiles();
+    }
+
+    /**
      * Look up a module by ID.
      * @param {string} moduleId
      * @returns {Module|null}

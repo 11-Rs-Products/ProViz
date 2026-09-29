@@ -44,6 +44,18 @@ import { MutationQueries } from '../mutation/MutationQueries.js';
 import { MutationTestGenerator } from '../mutation/MutationTestGenerator.js';
 import { MutationConcolicEngine } from '../mutation/MutationConcolicEngine.js';
 import { EquivalenceAnalyzer } from '../mutation/EquivalenceAnalyzer.js';
+import { RegressionEngine } from '../regression/RegressionEngine.js';
+import { RegressionQueries } from '../regression/RegressionQueries.js';
+import { SemanticDiff } from '../regression/SemanticDiff.js';
+import { ImpactAnalyzer } from '../regression/ImpactAnalyzer.js';
+import { TestSelector } from '../regression/TestSelector.js';
+import { SpecificationAnalyzer } from '../specification/SpecificationAnalyzer.js';
+import { SpecificationEngine } from '../specification/SpecificationEngine.js';
+import { SpecificationQueries } from '../specification/SpecificationQueries.js';
+import { OracleEvaluator } from '../specification/OracleEvaluator.js';
+import { SpecificationRefiner } from '../specification/SpecificationRefiner.js';
+import { WorkspaceSnapshot } from '../workspace/WorkspaceSnapshot.js';
+import { SourceFile } from '../workspace/SourceFile.js';
 
 export class Debugger {
     /**
@@ -60,6 +72,10 @@ export class Debugger {
         this._exception = null;
         this._uetTrace = null;
         this._listeners = [];
+
+        this._specificationEngine = new SpecificationEngine();
+        this._specificationSnapshot = null;
+        this._specificationQueries = null;
 
         // Synchronize with playback engine frame changes
         this._playbackEngine.onFrameChange((frame, eventType, runtimeState) => {
@@ -85,6 +101,10 @@ export class Debugger {
         this._concolicQueries = null;
         this._repairQueries = null;
         this._mutationQueries = null;
+        this._regressionQueries = null;
+        this._regressionCampaign = null;
+        this._specificationSnapshot = null;
+        this._specificationQueries = null;
         this._dataflowGraph = null;
 
         this._exception = null;
@@ -1681,6 +1701,272 @@ export class Debugger {
             mutantId,
             detected: true,
         };
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Stage 21: Regression Intelligence & Change Impact Query APIs
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    _ensureRegressionQueries(options = {}) {
+        if (!this._regressionQueries) {
+            const currentFrame = this._playbackEngine.getCurrentFrame();
+            const sourceCode = currentFrame?.source_code || 'x = 10\n';
+
+            const fileA = new SourceFile({ id: 'file_main', path: 'main.py', content: sourceCode });
+            const snapA = new WorkspaceSnapshot({ files: [fileA], version: 1 });
+
+            // Default comparison against self or slightly modified
+            const fileB = new SourceFile({ id: 'file_main', path: 'main.py', content: sourceCode });
+            const snapB = new WorkspaceSnapshot({ files: [fileB], version: 2 });
+
+            const engine = new RegressionEngine(options);
+            const campaign = engine.run(snapA, snapB, [], options);
+            this._regressionCampaign = campaign;
+            this._regressionQueries = new RegressionQueries(campaign, {
+                beforeSnapshot: snapA,
+                afterSnapshot: snapB,
+                sourceCode,
+                semanticDiff: SemanticDiff.diff(snapA, snapB),
+                impactResults: new ImpactAnalyzer().analyze(campaign.changeSet, snapB, []),
+            });
+        }
+        return this._regressionQueries;
+    }
+
+    createRegressionCampaign(options = {}) {
+        return this.analyzeChanges(options.beforeSnapshot, options.afterSnapshot, options.testSuite || [], options);
+    }
+
+    analyzeChanges(beforeSnapshot, afterSnapshot, testSuite = [], options = {}) {
+        if (!beforeSnapshot || !afterSnapshot) {
+            this._ensureRegressionQueries(options);
+            return this._regressionCampaign;
+        }
+        const engine = new RegressionEngine(options);
+        const campaign = engine.run(beforeSnapshot, afterSnapshot, testSuite, options);
+        this._regressionCampaign = campaign;
+        const diff = SemanticDiff.diff(beforeSnapshot, afterSnapshot, options);
+        const impactAnalyzer = new ImpactAnalyzer(options);
+        const impactResults = impactAnalyzer.analyze(campaign.changeSet, afterSnapshot, testSuite, options);
+
+        this._regressionQueries = new RegressionQueries(campaign, {
+            beforeSnapshot,
+            afterSnapshot,
+            semanticDiff: diff,
+            impactResults,
+            sourceCode: afterSnapshot.getAllFiles()[0]?.content || '',
+        });
+
+        return campaign;
+    }
+
+    getSemanticDiff() {
+        const queries = this._ensureRegressionQueries();
+        return queries.getSemanticDiff();
+    }
+
+    getChangeImpact() {
+        const queries = this._ensureRegressionQueries();
+        return queries.getImpactGraph();
+    }
+
+    getImpactGraph() {
+        const queries = this._ensureRegressionQueries();
+        return queries.getImpactGraph();
+    }
+
+    getAffectedSymbols() {
+        const queries = this._ensureRegressionQueries();
+        return queries.getAffectedSymbols();
+    }
+
+    getAffectedFunctions() {
+        const queries = this._ensureRegressionQueries();
+        return queries.getAffectedFunctions();
+    }
+
+    getAffectedTests() {
+        const queries = this._ensureRegressionQueries();
+        return queries.getAffectedTests();
+    }
+
+    getTestSelectionPlan() {
+        const queries = this._ensureRegressionQueries();
+        return queries.getTestSelectionPlan();
+    }
+
+    runRegressionTests(testSuite = [], options = {}) {
+        const queries = this._ensureRegressionQueries();
+        const snap = queries.getRegressionSnapshot();
+        if (snap?.campaign) return snap.campaign;
+        return this.analyzeChanges(null, null, testSuite, options);
+    }
+
+    getRegressionFindings() {
+        const queries = this._ensureRegressionQueries();
+        return queries.getRegressionFindings();
+    }
+
+    getRegressionFinding(id) {
+        const queries = this._ensureRegressionQueries();
+        return queries.getRegressionFinding(id);
+    }
+
+    explainImpact(targetId) {
+        const queries = this._ensureRegressionQueries();
+        return queries.explainImpact(targetId);
+    }
+
+    explainRegression(findingId) {
+        const queries = this._ensureRegressionQueries();
+        return queries.explainRegression(findingId);
+    }
+
+    getChangeCoverage() {
+        const queries = this._ensureRegressionQueries();
+        return queries.getChangeCoverage();
+    }
+
+    getRegressionRisk() {
+        const queries = this._ensureRegressionQueries();
+        return queries.getRiskScore();
+    }
+
+    getRegressionSnapshot() {
+        const queries = this._ensureRegressionQueries();
+        return queries.getRegressionSnapshot();
+    }
+
+    getMutationImpact(changeId) {
+        const queries = this._ensureRegressionQueries();
+        return queries.getMutationImpact(changeId);
+    }
+
+    getRepairImpact(patchSetId) {
+        const queries = this._ensureRegressionQueries();
+        return queries.getRepairImpact(patchSetId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Stage 22: Specification Mining, Behavioral Oracles & Test Synthesis APIs
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    _ensureSpecificationQueries(params = {}) {
+        if (!this._specificationQueries) {
+            this._specificationSnapshot = this._specificationEngine.analyze(params);
+            this._specificationQueries = this._specificationEngine.query(this._specificationSnapshot);
+        }
+        return this._specificationQueries;
+    }
+
+    mineSpecifications(functionId = 'global', observations = []) {
+        const snap = this._specificationEngine.analyze({
+            functionId,
+            observations,
+        });
+        this._specificationSnapshot = snap;
+        this._specificationQueries = this._specificationEngine.query(snap);
+        return snap.specifications;
+    }
+
+    getSpecifications() {
+        const queries = this._ensureSpecificationQueries();
+        return queries.getSpecifications();
+    }
+
+    getSpecification(id) {
+        const queries = this._ensureSpecificationQueries();
+        return queries.getSpecification(id);
+    }
+
+    getBehaviorModel() {
+        const queries = this._ensureSpecificationQueries();
+        return queries.getBehaviorModel();
+    }
+
+    getBehaviorSignature() {
+        const bm = this.getBehaviorModel();
+        return bm.signatures;
+    }
+
+    generateTestObjectives(options = {}) {
+        const snap = this._specificationEngine.analyze(options);
+        this._specificationSnapshot = snap;
+        this._specificationQueries = this._specificationEngine.query(snap);
+        return snap.objectives;
+    }
+
+    getTestObjectives() {
+        const queries = this._ensureSpecificationQueries();
+        return queries.getTestObjectives();
+    }
+
+    synthesizeTest(objective) {
+        return this._specificationEngine.analyzer.synthesizer.synthesize(objective);
+    }
+
+    synthesizeTests(options = {}) {
+        const snap = this._specificationEngine.analyze(options);
+        this._specificationSnapshot = snap;
+        this._specificationQueries = this._specificationEngine.query(snap);
+        return snap.generatedTests;
+    }
+
+    getGeneratedTests() {
+        const queries = this._ensureSpecificationQueries();
+        return queries.getGeneratedTests();
+    }
+
+    getSemanticTest(id) {
+        const queries = this._ensureSpecificationQueries();
+        return queries.getSemanticTest(id);
+    }
+
+    evaluateOracle(oracleId, observationOrTest) {
+        const queries = this._ensureSpecificationQueries();
+        const oracle = queries.getOracle(oracleId);
+        return OracleEvaluator.evaluate(oracle, observationOrTest);
+    }
+
+    getSpecificationCoverage() {
+        const queries = this._ensureSpecificationQueries();
+        return queries.getSpecificationCoverage();
+    }
+
+    getBehavioralCoverage() {
+        const queries = this._ensureSpecificationQueries();
+        return queries.getBehavioralCoverage();
+    }
+
+    getSpecificationGaps() {
+        const queries = this._ensureSpecificationQueries();
+        return queries.getGaps();
+    }
+
+    getGap(id) {
+        const queries = this._ensureSpecificationQueries();
+        return queries.getGap(id);
+    }
+
+    refineSpecification(specId, observation) {
+        const spec = this.getSpecification(specId);
+        if (!spec) return null;
+        return SpecificationRefiner.refineWithObservation(spec, observation);
+    }
+
+    explainSpecification(specId) {
+        const queries = this._ensureSpecificationQueries();
+        return queries.explainSpecification(specId);
+    }
+
+    explainGap(gapId) {
+        const queries = this._ensureSpecificationQueries();
+        return queries.explainGap(gapId);
+    }
+
+    getSpecificationSnapshot() {
+        const queries = this._ensureSpecificationQueries();
+        return queries.getSpecificationSnapshot();
     }
 
     // ─────────────────────────────────────────────────────────────────────────────

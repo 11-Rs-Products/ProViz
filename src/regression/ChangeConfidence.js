@@ -1,0 +1,19 @@
+/**
+ * ChangeConfidence — Confidence levels for detected changes and impact inferences.
+ */
+
+export const CHANGE_CONFIDENCES = Object.freeze({
+    PROVEN: 'PROVEN',
+    HIGH_CONFIDENCE: 'HIGH_CONFIDENCE',
+    MEDIUM_CONFIDENCE: 'MEDIUM_CONFIDENCE',
+    LOW_CONFIDENCE: 'LOW_CONFIDENCE',
+    UNKNOWN: 'UNKNOWN',
+});
+
+export const CONFIDENCE_WEIGHTS = Object.freeze({
+    [CHANGE_CONFIDENCES.PROVEN]: 1.0,
+    [CHANGE_CONFIDENCES.HIGH_CONFIDENCE]: 0.85,
+    [CHANGE_CONFIDENCES.MEDIUM_CONFIDENCE]: 0.6,
+    [CHANGE_CONFIDENCES.LOW_CONFIDENCE]: 0.3,
+    [CHANGE_CONFIDENCES.UNKNOWN]: 0.1,
+});

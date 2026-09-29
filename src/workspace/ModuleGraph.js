@@ -149,6 +149,10 @@ export class ModuleGraph {
         return this;
     }
 
+    addEdge(fromModuleId, toModuleId) {
+        return this.addDependency(fromModuleId, toModuleId);
+    }
+
     /**
      * Removes a directed dependency between two modules.
      * @param {string} fromModuleId
