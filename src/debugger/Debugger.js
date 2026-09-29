@@ -24,6 +24,10 @@ import { ControlFlowAnalyzer } from '../analysis/ControlFlowAnalyzer.js';
 import { AnalysisQueries } from '../analysis/AnalysisQueries.js';
 import { TypeFlowAnalyzer } from '../typeflow/TypeFlowAnalyzer.js';
 import { TypeQueries } from '../typeflow/TypeQueries.js';
+import { VerificationAnalyzer } from '../verification/VerificationAnalyzer.js';
+import { VerificationQueries } from '../verification/VerificationQueries.js';
+import { SymbolicAnalyzer } from '../symbolic/SymbolicAnalyzer.js';
+import { SymbolicQueries } from '../symbolic/SymbolicQueries.js';
 
 export class Debugger {
     /**
@@ -59,6 +63,8 @@ export class Debugger {
         this._playbackEngine.setFrames(input, problemConfig);
         this._programAnalysis = null;
         this._typeQueries = null;
+        this._verificationQueries = null;
+        this._symbolicQueries = null;
         this._dataflowGraph = null;
 
         this._exception = null;
@@ -935,6 +941,204 @@ export class Debugger {
         return {
             ...info,
             summary: `Watch '${info.target}' static types: [${info.staticTypes.join(', ')}], runtime observed: '${info.observedType}' (${info.observedValue}).`,
+        };
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Stage 15: Universal Static Verification & Bug Detection
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    getVerificationAnalysis(functionId = '<module>') {
+        if (!this._verificationQueries) {
+            const analyzer = new VerificationAnalyzer();
+            const sourceCode = this._uetTrace?.source?.files?.['main.py'] || this._uetTrace?.source?.code || this._playbackEngine.frames?.[0]?.source_code || '';
+            const analysis = analyzer.analyzeSource(sourceCode, { functionId });
+            this._verificationQueries = new VerificationQueries({
+                snapshot: analysis.snapshot,
+                cfg: analysis.cfg,
+                ssa: analysis.ssa,
+                typeAnalysis: analysis.typeAnalysis,
+                playbackEngine: this._playbackEngine,
+            });
+        }
+        return this._verificationQueries;
+    }
+
+    getFindings() {
+        return this.getVerificationAnalysis().getFindings();
+    }
+
+    getFinding(id) {
+        return this.getVerificationAnalysis().getFinding(id);
+    }
+
+    getFindingsAtFrame(frameIndex = null) {
+        const idx = frameIndex !== null ? frameIndex : (this._playbackEngine.currentIdx >= 0 ? this._playbackEngine.currentIdx : 0);
+        return this.getVerificationAnalysis().getFindingsAtFrame(idx);
+    }
+
+    getFindingsAtLocation(location) {
+        return this.getVerificationAnalysis().getFindingsAtLocation(location);
+    }
+
+    getVerificationSnapshot() {
+        return this.getVerificationAnalysis().getVerificationSnapshot();
+    }
+
+    explainFinding(id) {
+        return this.getVerificationAnalysis().explainFinding(id);
+    }
+
+    getFindingSlice(id, direction = 'BACKWARD') {
+        return this.getVerificationAnalysis().getSlice(id, direction);
+    }
+
+    getFindingEvidence(id) {
+        return this.getVerificationAnalysis().getEvidence(id);
+    }
+
+    getFindingPath(id) {
+        return this.getVerificationAnalysis().getPathConditions(id);
+    }
+
+    getProperties(target = null) {
+        return this.getVerificationAnalysis().getProperties(target);
+    }
+
+    getProperty(target, propertyKind) {
+        return this.getVerificationAnalysis().getProperty(target, propertyKind);
+    }
+
+    getWatchFindings(watchId) {
+        const watch = this.getWatchManager().get(watchId);
+        if (!watch) return [];
+        const target = typeof watch.expression === 'string'
+            ? watch.expression
+            : (watch.expression?.source || watch.expression?.normalized || String(watch.expression));
+        return this.getFindings().filter(f => f.message.includes(target) || f.property?.target === target);
+    }
+
+    getWatchProperties(watchId) {
+        const watch = this.getWatchManager().get(watchId);
+        if (!watch) return [];
+        const target = typeof watch.expression === 'string'
+            ? watch.expression
+            : (watch.expression?.source || watch.expression?.normalized || String(watch.expression));
+        return this.getProperties(target);
+    }
+
+    explainWatchSafety(watchId) {
+        const findings = this.getWatchFindings(watchId);
+        const watch = this.getWatchManager().get(watchId);
+        const target = typeof watch?.expression === 'string'
+            ? watch.expression
+            : (watch?.expression?.source || watch?.expression?.normalized || String(watch?.expression || ''));
+        if (findings.length === 0) {
+            return {
+                watchId,
+                target,
+                status: 'SAFE',
+                summary: `Watch '${target}' has no static safety issues detected.`,
+                findings: [],
+            };
+        }
+        return {
+            watchId,
+            target,
+            status: 'UNSAFE',
+            summary: `Watch '${target}' has ${findings.length} static findings: ${findings.map(f => f.shortMessage).join(', ')}.`,
+            findings,
+        };
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Stage 16: Universal Symbolic Constraint & Path Reasoning
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    getSymbolicAnalysis(functionId = '<module>') {
+        if (!this._symbolicQueries) {
+            const analyzer = new SymbolicAnalyzer();
+            const sourceCode = this._uetTrace?.source?.files?.['main.py'] || this._uetTrace?.source?.code || this._playbackEngine.frames?.[0]?.source_code || '';
+            const analysis = analyzer.analyzeSource(sourceCode, { functionId });
+            this._symbolicQueries = new SymbolicQueries({
+                snapshot: analysis.snapshot,
+                cfg: analysis.cfg,
+            });
+        }
+        return this._symbolicQueries;
+    }
+
+    getSymbolicPaths() {
+        return this.getSymbolicAnalysis().getPaths();
+    }
+
+    getSymbolicPath(pathId) {
+        return this.getSymbolicAnalysis().getPath(pathId);
+    }
+
+    getFeasibleSymbolicPaths() {
+        return this.getSymbolicAnalysis().getFeasiblePaths();
+    }
+
+    getInfeasibleSymbolicPaths() {
+        return this.getSymbolicAnalysis().getInfeasiblePaths();
+    }
+
+    getSymbolicProofs() {
+        return this.getSymbolicAnalysis().getProofs();
+    }
+
+    getSymbolicProof(property) {
+        return this.getSymbolicAnalysis().getProof(property);
+    }
+
+    getSymbolicCounterexamples() {
+        return this.getSymbolicAnalysis().getCounterexamples();
+    }
+
+    getSymbolicCounterexample(property) {
+        return this.getSymbolicAnalysis().getCounterexample(property);
+    }
+
+    getRefinedFinding(findingId) {
+        return this.getSymbolicAnalysis().getRefinedFinding(findingId);
+    }
+
+    getSymbolicSnapshot() {
+        return this.getSymbolicAnalysis().getSymbolicSnapshot();
+    }
+
+    getWatchConstraints(watchId) {
+        const watch = this.getWatchManager().get(watchId);
+        if (!watch) return [];
+        const target = typeof watch.expression === 'string'
+            ? watch.expression
+            : (watch.expression?.source || watch.expression?.normalized || String(watch.expression));
+        const paths = this.getSymbolicPaths();
+        const constraints = [];
+        for (const p of paths) {
+            if (p.finalState) {
+                for (const c of p.finalState.constraints.getAll()) {
+                    if (c.left.toString().includes(target) || c.right?.toString().includes(target)) {
+                        constraints.push(c);
+                    }
+                }
+            }
+        }
+        return constraints;
+    }
+
+    explainWatchConstraint(watchId) {
+        const watch = this.getWatchManager().get(watchId);
+        const target = typeof watch?.expression === 'string'
+            ? watch.expression
+            : (watch?.expression?.source || watch?.expression?.normalized || String(watch?.expression || ''));
+        const constraints = this.getWatchConstraints(watchId);
+        return {
+            watchId,
+            target,
+            constraints: constraints.map(c => c.toString()),
+            summary: `Watch '${target}' governed by constraints: [${constraints.map(c => c.toString()).join(', ')}].`,
         };
     }
 

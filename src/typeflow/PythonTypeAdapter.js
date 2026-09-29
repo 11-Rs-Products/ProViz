@@ -52,11 +52,12 @@ export class PythonTypeAdapter extends LanguageTypeAdapter {
         // List literal: [] or [1, 2]
         if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
             const inner = trimmed.substring(1, trimmed.length - 1).trim();
-            const elemType = inner ? this.inferLiteral(inner.split(',')[0].trim()).typeSet.first() : AbstractType.unknown();
+            const elements = inner ? inner.split(',').map(e => e.trim()).filter(Boolean) : [];
+            const elemType = elements.length > 0 ? this.inferLiteral(elements[0]).typeSet.first() : AbstractType.unknown();
             return new AbstractValue({
                 typeSet: [AbstractType.list(elemType)],
                 nullability: NULLABILITY.NON_NULL,
-                shape: new CollectionShape({ containerType: 'list', elementTypes: [elemType] }),
+                shape: new CollectionShape({ containerType: 'list', elementTypes: [elemType], fixedLength: elements.length }),
                 confidence: VALUE_CONFIDENCE.STATIC_GUARANTEE,
             });
         }
@@ -73,10 +74,12 @@ export class PythonTypeAdapter extends LanguageTypeAdapter {
 
         // Tuple literal: (1, 2)
         if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+            const inner = trimmed.substring(1, trimmed.length - 1).trim();
+            const elements = inner ? inner.split(',').map(e => e.trim()).filter(Boolean) : [];
             return new AbstractValue({
                 typeSet: [AbstractType.tuple()],
                 nullability: NULLABILITY.NON_NULL,
-                shape: new CollectionShape({ containerType: 'tuple' }),
+                shape: new CollectionShape({ containerType: 'tuple', fixedLength: elements.length }),
                 confidence: VALUE_CONFIDENCE.STATIC_GUARANTEE,
             });
         }
