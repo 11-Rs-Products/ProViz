@@ -13,13 +13,18 @@ export class LinearConstraintSolver {
      */
     solve(constraints = []) {
         const bounds = new Map(); // varName -> { min, max, exact, isNone, notNone, nonZero }
+        const cstList = constraints && typeof constraints.getAll === 'function'
+            ? constraints.getAll()
+            : (constraints && typeof constraints.getConstraints === 'function'
+                ? constraints.getConstraints()
+                : (Array.isArray(constraints) ? constraints : []));
 
-        for (const c of constraints) {
+        for (const c of cstList) {
             const subj = c.left.toString();
             const rVal = c.right && c.right.isConstant() ? c.right.payload.value : null;
 
             if (!bounds.has(subj)) {
-                bounds.set(subj, { min: -Infinity, max: Infinity, exact: null, isNone: false, notNone: false, nonZero: false });
+                bounds.set(subj, { min: -Infinity, max: Infinity, exact: null, isNone: false, notNone: false, nonZero: false, excluded: new Set() });
             }
             const b = bounds.get(subj);
 
@@ -41,11 +46,12 @@ export class LinearConstraintSolver {
                         return ConstraintResult.unsat([c], `Equality contradiction: ${subj} == ${b.exact} and ${subj} == ${rVal}`);
                     }
                     b.exact = rVal;
-                    if (b.exact < b.min || b.exact > b.max) {
-                        return ConstraintResult.unsat([c], `Equality ${subj} == ${rVal} violates interval [${b.min}, ${b.max}]`);
+                    if (b.exact < b.min || b.exact > b.max || b.excluded.has(b.exact)) {
+                        return ConstraintResult.unsat([c], `Equality ${subj} == ${rVal} violates interval or disequality`);
                     }
                 } else if (c.relation === CONSTRAINT_RELATIONS.NE) {
                     if (rVal === 0) b.nonZero = true;
+                    b.excluded.add(rVal);
                     if (b.exact === rVal) {
                         return ConstraintResult.unsat([c], `Disequality contradiction: ${subj} == ${rVal} and ${subj} != ${rVal}`);
                     }
@@ -74,11 +80,23 @@ export class LinearConstraintSolver {
             if (b.exact !== null) {
                 model[vName] = b.exact;
             } else if (b.min !== -Infinity) {
-                model[vName] = b.nonZero && b.min === 0 ? 1 : b.min;
+                let candidate = b.nonZero && b.min === 0 ? 1 : b.min;
+                while (b.excluded.has(candidate) && candidate <= b.max) {
+                    candidate++;
+                }
+                model[vName] = candidate;
             } else if (b.max !== Infinity) {
-                model[vName] = b.nonZero && b.max === 0 ? -1 : b.max;
+                let candidate = b.nonZero && b.max === 0 ? -1 : b.max;
+                while (b.excluded.has(candidate) && candidate >= b.min) {
+                    candidate--;
+                }
+                model[vName] = candidate;
             } else {
-                model[vName] = b.nonZero ? 1 : 0;
+                let candidate = b.nonZero ? 1 : 0;
+                while (b.excluded.has(candidate)) {
+                    candidate++;
+                }
+                model[vName] = candidate;
             }
         }
 

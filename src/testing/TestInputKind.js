@@ -1,0 +1,13 @@
+/**
+ * TestInputKind — Enumeration of test input mechanisms.
+ */
+
+export const TEST_INPUT_KINDS = Object.freeze({
+    FUNCTION_ARGUMENTS: 'FUNCTION_ARGUMENTS',
+    MODULE_INPUTS: 'MODULE_INPUTS',
+    CLI_ARGUMENTS: 'CLI_ARGUMENTS',
+    ENVIRONMENT_VALUES: 'ENVIRONMENT_VALUES',
+    FILE_CONTENT: 'FILE_CONTENT',
+    STDIN: 'STDIN',
+    COMPOSITE: 'COMPOSITE',
+});
