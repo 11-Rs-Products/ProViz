@@ -1,0 +1,22 @@
+/**
+ * ExplorationSource — Provenance origins for exploration targets and inputs.
+ */
+
+export const ExplorationSource = Object.freeze({
+    SPECIFICATION: 'SPECIFICATION',
+    ORACLE: 'ORACLE',
+    TEST_OBJECTIVE: 'TEST_OBJECTIVE',
+    BOUNDARY: 'BOUNDARY',
+    CFG: 'CFG',
+    PATH_ANALYSIS: 'PATH_ANALYSIS',
+    DATAFLOW: 'DATAFLOW',
+    TYPEFLOW: 'TYPEFLOW',
+    SYMBOLIC: 'SYMBOLIC',
+    CONCOLIC: 'CONCOLIC',
+    MUTATION: 'MUTATION',
+    REPAIR: 'REPAIR',
+    REGRESSION: 'REGRESSION',
+    OBSERVATION: 'OBSERVATION',
+    USER_DEFINED: 'USER_DEFINED',
+    ADAPTIVE_FEEDBACK: 'ADAPTIVE_FEEDBACK',
+});

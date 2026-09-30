@@ -56,6 +56,8 @@ import { OracleEvaluator } from '../specification/OracleEvaluator.js';
 import { SpecificationRefiner } from '../specification/SpecificationRefiner.js';
 import { WorkspaceSnapshot } from '../workspace/WorkspaceSnapshot.js';
 import { SourceFile } from '../workspace/SourceFile.js';
+import * as Exploration from '../exploration/index.js';
+
 
 export class Debugger {
     /**
@@ -76,6 +78,9 @@ export class Debugger {
         this._specificationEngine = new SpecificationEngine();
         this._specificationSnapshot = null;
         this._specificationQueries = null;
+
+        this._explorationCampaigns = new Map();
+        this._currentExplorationCampaign = null;
 
         // Synchronize with playback engine frame changes
         this._playbackEngine.onFrameChange((frame, eventType, runtimeState) => {
@@ -1967,6 +1972,93 @@ export class Debugger {
     getSpecificationSnapshot() {
         const queries = this._ensureSpecificationQueries();
         return queries.getSpecificationSnapshot();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Stage 23: Behavioral Exploration & Property-Based Testing API
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    createExplorationCampaign(options = {}) {
+        const campaign = new Exploration.ExplorationCampaign(options);
+        this._explorationCampaigns.set(campaign.id, campaign);
+        this._currentExplorationCampaign = campaign;
+        return campaign;
+    }
+
+    startExploration(campaignId, budget = null) {
+        const campaign = this._explorationCampaigns.get(campaignId) || this._currentExplorationCampaign;
+        if (!campaign) throw new Error(`Campaign ${campaignId} not found`);
+        if (budget) campaign.budget = budget instanceof Exploration.ExplorationBudget ? budget : new Exploration.ExplorationBudget(budget);
+        campaign.start();
+        return campaign;
+    }
+
+    generateInputs(generatorConfig = {}) {
+        const type = generatorConfig.type || 'integer';
+        let generator;
+        switch (type.toLowerCase()) {
+            case 'integer': generator = new Exploration.IntegerGenerator(generatorConfig); break;
+            case 'float': generator = new Exploration.FloatGenerator(generatorConfig); break;
+            case 'boolean': generator = new Exploration.BooleanGenerator(generatorConfig); break;
+            case 'string': generator = new Exploration.StringGenerator(generatorConfig); break;
+            case 'array': generator = new Exploration.ArrayGenerator(generatorConfig); break;
+            default: generator = new Exploration.IntegerGenerator(generatorConfig);
+        }
+        const count = generatorConfig.count || 10;
+        const ctx = new Exploration.GeneratorContext({ seed: generatorConfig.seed || 42 });
+        return generator.sample(ctx, count);
+    }
+
+    getMetamorphicRelations(campaignId = null) {
+        const campaign = campaignId ? this._explorationCampaigns.get(campaignId) : this._currentExplorationCampaign;
+        return campaign ? campaign.metamorphicRelations : [];
+    }
+
+    mineMetamorphicRelations(traceOrCode) {
+        return Exploration.MetamorphicMiner.mineRelations(traceOrCode);
+    }
+
+    runMetamorphicCampaign(relationId, inputCount = 10) {
+        const campaign = new Exploration.MetamorphicCampaign();
+        return campaign.runRelation(relationId, inputCount);
+    }
+
+    getExplorationResults(campaignId = null) {
+        const campaign = campaignId ? this._explorationCampaigns.get(campaignId) : this._currentExplorationCampaign;
+        return campaign ? campaign.finish() : null;
+    }
+
+    getExplorationFindings(campaignId = null) {
+        const campaign = campaignId ? this._explorationCampaigns.get(campaignId) : this._currentExplorationCampaign;
+        return campaign ? campaign.findings : [];
+    }
+
+    getBehavioralClusters(campaignId = null) {
+        const campaign = campaignId ? this._explorationCampaigns.get(campaignId) : this._currentExplorationCampaign;
+        return campaign ? campaign.noveltyDetector.clusterer.clusters : [];
+    }
+
+    getNovelBehaviors(campaignId = null) {
+        const campaign = campaignId ? this._explorationCampaigns.get(campaignId) : this._currentExplorationCampaign;
+        return campaign ? campaign.noveltyDetector.novelFingerprints : [];
+    }
+
+    getExplorationCoverage(campaignId = null) {
+        const campaign = campaignId ? this._explorationCampaigns.get(campaignId) : this._currentExplorationCampaign;
+        if (!campaign) return null;
+        return Exploration.ExplorationAdequacyAnalyzer.analyze(campaign);
+    }
+
+    shrinkCounterexample(counterexample, predicate) {
+        const res = Exploration.Shrinker.shrink(counterexample, predicate);
+        return res?.minimalInput !== undefined ? res.minimalInput : res;
+    }
+
+    explainExploration(findingId, campaignId = null) {
+        const campaign = campaignId ? this._explorationCampaigns.get(campaignId) : this._currentExplorationCampaign;
+        if (!campaign) return 'Campaign not found';
+        const finding = campaign.findings.find(f => f.id === findingId) || campaign.findings[0];
+        return Exploration.ExplorationExplainer.explain(finding);
     }
 
     // ─────────────────────────────────────────────────────────────────────────────

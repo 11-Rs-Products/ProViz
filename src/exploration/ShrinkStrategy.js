@@ -1,0 +1,12 @@
+/**
+ * ShrinkStrategy — Taxonomy of input reduction strategies.
+ */
+
+export const ShrinkStrategy = Object.freeze({
+    BINARY_REDUCTION: 'BINARY_REDUCTION',
+    ELEMENT_REMOVAL: 'ELEMENT_REMOVAL',
+    NUMERIC_BISECTION: 'NUMERIC_BISECTION',
+    SUBSTRING_EXTRACTION: 'SUBSTRING_EXTRACTION',
+    STRUCTURAL_PRUNING: 'STRUCTURAL_PRUNING',
+    COMPOSITE: 'COMPOSITE',
+});
