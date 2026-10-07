@@ -1,0 +1,24 @@
+/**
+ * PerformancePropertyKind.js
+ * Canonical measurable performance, resource, and reliability properties in ProViz Stage 32.
+ */
+
+export const PerformancePropertyKind = Object.freeze({
+  LATENCY: 'LATENCY',
+  THROUGHPUT: 'THROUGHPUT',
+  CPU_USAGE: 'CPU_USAGE',
+  MEMORY_USAGE: 'MEMORY_USAGE',
+  ALLOCATION_RATE: 'ALLOCATION_RATE',
+  GC_PRESSURE: 'GC_PRESSURE',
+  IO_COST: 'IO_COST',
+  NETWORK_COST: 'NETWORK_COST',
+  DISK_COST: 'DISK_COST',
+  ENERGY_COST: 'ENERGY_COST',
+  STARTUP_TIME: 'STARTUP_TIME',
+  RESPONSE_TIME: 'RESPONSE_TIME',
+  SCALABILITY: 'SCALABILITY',
+  CAPACITY: 'CAPACITY',
+  RESOURCE_BOUND: 'RESOURCE_BOUND',
+  JITTER: 'JITTER',
+  TAIL_LATENCY: 'TAIL_LATENCY'
+});

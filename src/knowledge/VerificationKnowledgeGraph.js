@@ -17,13 +17,12 @@ export class VerificationKnowledgeGraph {
 
   addEntity(entity) {
     const verified = entity instanceof KnowledgeEntity ? entity : KnowledgeEntity.fromJSON(entity);
-    if (this._entities.has(verified.id)) {
-      this._index.unindexEntity(this._entities.get(verified.id));
+    const existing = this._entities.get(verified.id);
+    if (existing !== undefined) {
+      this._index.unindexEntity(existing);
     }
     this._entities.set(verified.id, verified);
     this._index.indexEntity(verified);
-    if (!this._outgoing.has(verified.id)) this._outgoing.set(verified.id, new Set());
-    if (!this._incoming.has(verified.id)) this._incoming.set(verified.id, new Set());
     return verified;
   }
 
@@ -42,6 +41,8 @@ export class VerificationKnowledgeGraph {
 
     this._edges.set(verified.id, verified);
     this._index.indexEdge(verified);
+    if (!this._outgoing.has(verified.source)) this._outgoing.set(verified.source, new Set());
+    if (!this._incoming.has(verified.target)) this._incoming.set(verified.target, new Set());
     this._outgoing.get(verified.source).add(verified.id);
     this._incoming.get(verified.target).add(verified.id);
     return verified;

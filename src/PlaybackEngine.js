@@ -98,6 +98,74 @@ export class PlaybackEngine {
      * Register a listener: fn(frame, event_type, runtimeState)
      * @param {Function} fn
      */
+    /**
+     * Modern EventEmitter-style listener subscription.
+     * @param {string} event - Event name (e.g. 'step')
+     * @param {Function} fn - Callback function
+     */
+    on(event, fn) {
+        this.onFrameChange((frame, evt, runtimeState) => {
+            if (evt === 'next' || evt === 'prev' || evt === 'jump' || evt === 'step' || !evt) {
+                fn(frame, runtimeState);
+            }
+        });
+    }
+
+    /**
+     * Alias for setFrames to load canonical UET trace.
+     */
+    loadTrace(input, problemConfig = {}) {
+        return this.setFrames(input, problemConfig);
+    }
+
+    /**
+     * Reset playback to beginning.
+     */
+    reset() {
+        return this.restart();
+    }
+
+    /**
+     * Advance one step.
+     */
+    stepForward() {
+        return this.nextFrame();
+    }
+
+    /**
+     * Step backward one frame.
+     */
+    stepBackward() {
+        return this.prevFrame();
+    }
+
+    /**
+     * Seek to specific frame index.
+     */
+    seek(idx) {
+        return this.jumpTo(idx);
+    }
+
+    get currentIndex() {
+        return this._currentIdx;
+    }
+
+    get totalSteps() {
+        return this._timeline ? this._timeline.totalFrames : 0;
+    }
+
+    get isPlaying() {
+        return this._playing;
+    }
+
+    getCurrentState() {
+        return this.getCurrentRuntimeState();
+    }
+
+    /**
+     * Subscribe to frame changes.
+     * @param {Function} fn - (frame, event, runtimeState) => void
+     */
     onFrameChange(fn) {
         this._listeners.push(fn);
     }

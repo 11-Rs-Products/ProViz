@@ -1,0 +1,23 @@
+/**
+ * OSState.js
+ * Comprehensive operational states of the ProViz Autonomous Verification Operating System.
+ */
+
+export const OSState = Object.freeze({
+  INITIALIZING: 'INITIALIZING',
+  READY: 'READY',
+  OBSERVING: 'OBSERVING',
+  ANALYZING: 'ANALYZING',
+  PLANNING: 'PLANNING',
+  VERIFYING: 'VERIFYING',
+  REPAIRING: 'REPAIRING',
+  REVERIFYING: 'REVERIFYING',
+  GOVERNING: 'GOVERNING',
+  CERTIFYING: 'CERTIFYING',
+  PAUSED: 'PAUSED',
+  ESCALATED: 'ESCALATED',
+  RECOVERING: 'RECOVERING',
+  SHUTTING_DOWN: 'SHUTTING_DOWN',
+  STOPPED: 'STOPPED',
+  FAILED_SAFE: 'FAILED_SAFE'
+});

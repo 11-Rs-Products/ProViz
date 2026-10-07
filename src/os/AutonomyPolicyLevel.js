@@ -1,0 +1,13 @@
+/**
+ * AutonomyPolicyLevel.js
+ * Explicit operational autonomy levels for ProViz OS.
+ */
+
+export const AutonomyPolicyLevel = Object.freeze({
+  LEVEL_0_OBSERVE_ONLY: 'LEVEL_0_OBSERVE_ONLY',
+  LEVEL_1_ADVISORY: 'LEVEL_1_ADVISORY',
+  LEVEL_2_AUTO_VERIFY: 'LEVEL_2_AUTO_VERIFY',
+  LEVEL_3_AUTO_REPAIR: 'LEVEL_3_AUTO_REPAIR',
+  LEVEL_4_AUTO_REFACTOR: 'LEVEL_4_AUTO_REFACTOR',
+  LEVEL_5_FULL_AUTONOMOUS_OPERATION: 'LEVEL_5_FULL_AUTONOMOUS_OPERATION'
+});

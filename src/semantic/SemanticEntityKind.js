@@ -1,0 +1,84 @@
+/**
+ * SemanticEntityKind.js
+ * Comprehensive semantic entity kinds spanning program structure, execution, memory,
+ * specifications, tests, proofs, dependencies, and verification orchestration.
+ */
+
+export const SemanticEntityKind = Object.freeze({
+  // Structure & Scope
+  PROGRAM: 'PROGRAM',
+  PROJECT: 'PROJECT',
+  PACKAGE: 'PACKAGE',
+  MODULE: 'MODULE',
+  FILE: 'FILE',
+  NAMESPACE: 'NAMESPACE',
+  CLASS: 'CLASS',
+  INTERFACE: 'INTERFACE',
+  FUNCTION: 'FUNCTION',
+  METHOD: 'METHOD',
+  CONSTRUCTOR: 'CONSTRUCTOR',
+  PARAMETER: 'PARAMETER',
+  VARIABLE: 'VARIABLE',
+  FIELD: 'FIELD',
+  PROPERTY: 'PROPERTY',
+  TYPE: 'TYPE',
+  GENERIC_TYPE: 'GENERIC_TYPE',
+  ENUM: 'ENUM',
+  CONSTANT: 'CONSTANT',
+
+  // Code & Control Flow
+  STATEMENT: 'STATEMENT',
+  EXPRESSION: 'EXPRESSION',
+  OPERATION: 'OPERATION',
+  LITERAL: 'LITERAL',
+  CONTROL_FLOW: 'CONTROL_FLOW',
+  BRANCH: 'BRANCH',
+  LOOP: 'LOOP',
+  CALL_SITE: 'CALL_SITE',
+  RETURN_SITE: 'RETURN_SITE',
+  EXCEPTION_SITE: 'EXCEPTION_SITE',
+
+  // Memory & Heap
+  MEMORY_OBJECT: 'MEMORY_OBJECT',
+  HEAP_REGION: 'HEAP_REGION',
+  ALLOCATION: 'ALLOCATION',
+  MUTATION: 'MUTATION',
+  SIDE_EFFECT: 'SIDE_EFFECT',
+
+  // Contracts & Specifications
+  CONTRACT: 'CONTRACT',
+  INVARIANT: 'INVARIANT',
+  SPECIFICATION: 'SPECIFICATION',
+  ASSUMPTION: 'ASSUMPTION',
+
+  // Testing & Behavior
+  TEST: 'TEST',
+  ORACLE: 'ORACLE',
+  EXECUTION: 'EXECUTION',
+  BEHAVIOR: 'BEHAVIOR',
+  STATE: 'STATE',
+  TRACE: 'TRACE',
+
+  // Verification & Repair
+  PROOF: 'PROOF',
+  COUNTEREXAMPLE: 'COUNTEREXAMPLE',
+  FINDING: 'FINDING',
+  MUTANT: 'MUTANT',
+  PATCH: 'PATCH',
+  REPAIR: 'REPAIR',
+
+  // Dependencies & Boundaries
+  DEPENDENCY: 'DEPENDENCY',
+  API_BOUNDARY: 'API_BOUNDARY',
+  LANGUAGE_BOUNDARY: 'LANGUAGE_BOUNDARY',
+  ENVIRONMENT: 'ENVIRONMENT',
+  CONFIGURATION: 'CONFIGURATION',
+
+  // Verification Orchestration
+  VERIFICATION_GOAL: 'VERIFICATION_GOAL',
+  EXPERIMENT: 'EXPERIMENT',
+  TASK: 'TASK',
+  AGENT: 'AGENT',
+  SOLVER: 'SOLVER',
+  EVIDENCE: 'EVIDENCE'
+});

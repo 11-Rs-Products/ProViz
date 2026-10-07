@@ -1,563 +1,644 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ProViz - Interactive 3D Math & Python Visualizer</title>
-    <meta name="description" content="Real-time 3D equation solver, vector space visualizer, and Python algorithm playground built for students and educators." />
-    <link rel="stylesheet" href="./style.css" />
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
-  </head>
-  <body>
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ProViz — Autonomous Verification Operating System & 3D Visualizer</title>
+  <meta name="description" content="Persistent, policy-controlled Autonomous Verification Operating System with interactive 3D execution visualizers, symbolic constraint reasoning, continuous self-healing, and release certification." />
+  <link rel="stylesheet" href="./style.css" />
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+</head>
+<body class="proviz-os-app">
 
-    <!-- LANDING PAGE VIEW -->
-    <div id="landing-page">
-      
-      <!-- Sticky Navigation Header -->
-      <nav id="landing-navbar">
-        <a href="#" class="nav-brand">
-          <div class="logo-box">
-            <svg viewBox="0 0 24 24">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-            </svg>
-          </div>
-          <span>ProViz</span>
-        </a>
-
-        <ul class="nav-links">
-          <li><a href="#features">Features</a></li>
-          <li><a href="#demo">Live Demo</a></li>
-          <li><a href="#curriculum">Curriculum</a></li>
-          <li><a href="#faq">FAQ</a></li>
-        </ul>
-
-        <div class="nav-actions">
-          <button id="nav-btn-signin" class="btn btn-outline">Sign In</button>
-          
-          <div id="nav-user-profile" style="display: none; align-items: center; gap: 0.6rem;">
-            <div id="nav-user-badge" class="nav-user-badge" title="Logged in user">
-              <span id="nav-user-avatar" class="nav-user-avatar">U</span>
-              <span id="nav-user-email" class="nav-user-email"></span>
-            </div>
-            <button id="nav-btn-logout" class="btn btn-outline btn-logout-action" title="Sign Out" style="padding: 0.5rem 0.85rem; font-size: 0.85rem; border-color: rgba(239, 68, 68, 0.3); color: #fca5a5;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-              <span>Logout</span>
-            </button>
-          </div>
-
-          <button id="nav-btn-launch" class="btn btn-primary btn-launch-app">Launch App 🚀</button>
-        </div>
-      </nav>
-
-      <!-- Hero Section -->
-      <section class="hero-section" id="hero">
-        <div class="hero-content">
-          <div class="hero-badge">
-            <span>✨ Designed for IITM BS & Python Math</span>
-          </div>
-
-          <h1 class="hero-title">
-            Visualize Python Code & <span class="text-gradient">3D Math</span> in Real-Time
-          </h1>
-
-          <p class="hero-subtitle">
-            An interactive 3D equation solver, vector space visualizer, and algorithm simulator. Execute Python client-side with Pyodide and watch concepts come alive.
-          </p>
-
-          <div class="hero-ctas">
-            <button class="btn btn-glow btn-lg btn-launch-app">
-              <span>Launch 3D Playground</span>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </button>
-            <a href="#demo" class="btn btn-outline btn-lg">
-              <span>Try Live Demo</span>
-            </a>
-          </div>
-
-          <div class="hero-metrics">
-            <div class="metric-item">
-              <span class="metric-number text-gradient">100%</span>
-              <span class="metric-label">Client-Side Pyodide</span>
-            </div>
-            <div class="metric-item">
-              <span class="metric-number">3D GSAP</span>
-              <span class="metric-label">Smooth Step Solvers</span>
-            </div>
-            <div class="metric-item">
-              <span class="metric-number">Sanity</span>
-              <span class="metric-label">Live Problem Sync</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="hero-canvas-container">
-          <canvas id="hero-canvas"></canvas>
-          <div class="hero-canvas-badge">
-            <span class="pulse-dot"></span>
-            <span>Interactive 3D Three.js Engine</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- Interactive Sandbox Section -->
-      <section class="section" id="demo">
-        <div class="section-header">
-          <span class="section-tag">Interactive Sandbox</span>
-          <h2 class="section-title">See Python & 3D Math in Action</h2>
-          <p class="section-desc">Select a algorithm or math topic below to preview live Python code and its corresponding 3D spatial animation.</p>
-        </div>
-
-        <div class="sandbox-wrapper">
-          <div class="sandbox-tabs">
-            <button class="sandbox-tab-btn active" data-preset="array">3D Array Mutation</button>
-            <button class="sandbox-tab-btn" data-preset="vector">3D Vector Addition</button>
-            <button class="sandbox-tab-btn" data-preset="matrix">3D Matrix Transform</button>
-          </div>
-
-          <div class="sandbox-grid">
-            <div class="sandbox-code-box">
-              <div class="sandbox-code-header">
-                <div class="dots">
-                  <div class="dot dot-red"></div>
-                  <div class="dot dot-yellow"></div>
-                  <div class="dot dot-green"></div>
-                </div>
-                <span>main.py (Python 3.11)</span>
-              </div>
-              <div id="sandbox-code-preview" class="sandbox-code-content"></div>
-            </div>
-
-            <div class="sandbox-visual-box">
-              <canvas id="sandbox-canvas"></canvas>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Features Section -->
-      <section class="section" id="features">
-        <div class="section-header">
-          <span class="section-tag">Core Features</span>
-          <h2 class="section-title">Everything You Need for 3D Visual Learning</h2>
-          <p class="section-desc">Built from the ground up for computer science, mathematics, and physics students.</p>
-        </div>
-
-        <div class="features-grid">
-          <div class="feature-card">
-            <div class="feature-icon">
-              <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-            </div>
-            <h3 class="feature-title">WebAssembly Pyodide Engine</h3>
-            <p class="feature-desc">Run Python standard library directly in your browser with instant feedback and zero setup required.</p>
-          </div>
-
-          <div class="feature-card">
-            <div class="feature-icon">
-              <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-            </div>
-            <h3 class="feature-title">Step-by-Step GSAP Animations</h3>
-            <p class="feature-desc">Watch arrays swap elements, vectors transform, and equations resolve step-by-step with smooth 3D animations.</p>
-          </div>
-
-          <div class="feature-card">
-            <div class="feature-icon">
-              <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>
-            </div>
-            <h3 class="feature-title">CodeMirror 6 Editor</h3>
-            <p class="feature-desc">Professional code editing experience complete with Python syntax highlighting, error hints, and full-screen view.</p>
-          </div>
-
-          <div class="feature-card">
-            <div class="feature-icon">
-              <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-            </div>
-            <h3 class="feature-title">Sanity CMS Problem Sync</h3>
-            <p class="feature-desc">Dynamic sync of curated coursework problems directly from Sanity CMS with fallback questions included.</p>
-          </div>
-
-          <div class="feature-card">
-            <div class="feature-icon">
-              <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            </div>
-            <h3 class="feature-title">Firebase Google Auth</h3>
-            <p class="feature-desc">Seamless and secure single sign-on tailored for university student accounts and educators.</p>
-          </div>
-
-          <div class="feature-card">
-            <div class="feature-icon">
-              <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-            </div>
-            <h3 class="feature-title">Three.js Orbit Controls</h3>
-            <p class="feature-desc">Full 360-degree rotation, pan, zoom, and camera view controls for inspecting 3D objects in space.</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- Curriculum Showcase Section -->
-      <section class="section" id="curriculum">
-        <div class="section-header">
-          <span class="section-tag">Curriculum Topics</span>
-          <h2 class="section-title">Supported Subjects & Courses</h2>
-          <p class="section-desc">Tailored topics designed to accelerate understanding in core CS & Math courses.</p>
-        </div>
-
-        <div class="curriculum-grid">
-          <div class="topic-card">
-            <span class="topic-badge">Mathematics</span>
-            <h3 class="topic-title">Linear Algebra</h3>
-            <p class="section-desc">Visualize vector spaces, dot/cross products, matrix transformations, and eigenvalues in 3D space.</p>
-            <ul class="topic-items">
-              <li>Vector Addition & Scaling</li>
-              <li>Matrix Linear Maps</li>
-              <li>3D Coordinate Systems</li>
-            </ul>
-          </div>
-
-          <div class="topic-card">
-            <span class="topic-badge">Data Structures</span>
-            <h3 class="topic-title">Arrays & Matrices</h3>
-            <p class="section-desc">Step through array element access, sorting algorithms, matrix operations, and memory layouts.</p>
-            <ul class="topic-items">
-              <li>Element Pointer Shifts</li>
-              <li>Two-Pointer Algorithms</li>
-              <li>2D/3D Grid Traversals</li>
-            </ul>
-          </div>
-
-          <div class="topic-card">
-            <span class="topic-badge">Calculus</span>
-            <h3 class="topic-title">3D Multivariable Calculus</h3>
-            <p class="section-desc">Plot surface functions, partial derivatives, gradient vectors, and parametric curves dynamically.</p>
-            <ul class="topic-items">
-              <li>Gradient Vector Fields</li>
-              <li>3D Quadric Surfaces</li>
-              <li>Parametric Trajectories</li>
-            </ul>
-          </div>
-
-          <div class="topic-card">
-            <span class="topic-badge">Physics & CS</span>
-            <h3 class="topic-title">Computational Physics</h3>
-            <p class="section-desc">Simulate kinematics, particle trajectories, force fields, and numerical differential equations.</p>
-            <ul class="topic-items">
-              <li>Euler & RK4 Integrators</li>
-              <li>Particle Swarm Motion</li>
-              <li>Gravitational Attractors</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      <!-- Testimonials Section -->
-      <section class="section" id="testimonials">
-        <div class="section-header">
-          <span class="section-tag">Student Feedback</span>
-          <h2 class="section-title">Loved by Students & TAs</h2>
-          <p class="section-desc">Here is what students learning Python and 3D Mathematics have to say.</p>
-        </div>
-
-        <div class="testimonials-grid">
-          <div class="testimonial-card">
-            <div class="stars">★★★★★</div>
-            <p class="testimonial-text">"ProViz made understanding matrix transformations so intuitive! Seeing the 3D grid shift in real-time while editing Python code was a game changer."</p>
-            <div class="user-info">
-              <div class="user-avatar">AR</div>
-              <div class="user-details">
-                <h4>Aditya R.</h4>
-                <p>IITM BS Data Science Student</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="testimonial-card">
-            <div class="stars">★★★★★</div>
-            <p class="testimonial-text">"The client-side Pyodide execution means no delays or server waiting. I can test my Python solutions and see step-by-step animations instantly."</p>
-            <div class="user-info">
-              <div class="user-avatar">PS</div>
-              <div class="user-details">
-                <h4>Priya S.</h4>
-                <p>Python Programming TA</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="testimonial-card">
-            <div class="stars">★★★★★</div>
-            <p class="testimonial-text">"Combining Three.js with CodeMirror Python editor makes learning math feel like playing a video game. Highly recommended!"</p>
-            <div class="user-info">
-              <div class="user-avatar">VK</div>
-              <div class="user-details">
-                <h4>Vikram K.</h4>
-                <p>CS Undergrad</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- FAQ Section -->
-      <section class="section" id="faq">
-        <div class="section-header">
-          <span class="section-tag">FAQ</span>
-          <h2 class="section-title">Frequently Asked Questions</h2>
-        </div>
-
-        <div class="faq-container">
-          <div class="faq-item active">
-            <div class="faq-question">
-              <span>What is ProViz?</span>
-              <span class="faq-icon">▼</span>
-            </div>
-            <div class="faq-answer">
-              <p>ProViz is an interactive 3D web platform that visualizes Python code execution, array modifications, vector mathematics, and equations step-by-step using Three.js and Pyodide WebAssembly.</p>
-            </div>
-          </div>
-
-          <div class="faq-item">
-            <div class="faq-question">
-              <span>Do I need to install Python locally?</span>
-              <span class="faq-icon">▼</span>
-            </div>
-            <div class="faq-answer">
-              <p>No! ProViz uses Pyodide, which runs full Python 3 inside your browser client-side using WebAssembly technology.</p>
-            </div>
-          </div>
-
-          <div class="faq-item">
-            <div class="faq-question">
-              <span>Who can log in to ProViz?</span>
-              <span class="faq-icon">▼</span>
-            </div>
-            <div class="faq-answer">
-              <p>Students and educators can log in using Google Sign-In with their university or personal email addresses.</p>
-            </div>
-          </div>
-
-          <div class="faq-item">
-            <div class="faq-question">
-              <span>Is ProViz free to use?</span>
-              <span class="faq-icon">▼</span>
-            </div>
-            <div class="faq-answer">
-              <p>Yes, ProViz is 100% free for students, TAs, and learners interested in 3D Python math visualization.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Footer -->
-      <footer>
-        <div class="footer-container">
-          <div class="footer-brand">
-            <a href="#" class="nav-brand">
-              <div class="logo-box">
-                <svg viewBox="0 0 24 24">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                </svg>
-              </div>
-              <span>ProViz</span>
-            </a>
-            <p>Empowering students to master Python programming, 3D linear algebra, and data structure algorithms visually.</p>
-          </div>
-
-          <div class="footer-col">
-            <h4>Platform</h4>
-            <ul class="footer-links">
-              <li><a href="#features">Features</a></li>
-              <li><a href="#demo">Live Demo</a></li>
-              <li><a href="#curriculum">Curriculum</a></li>
-              <li><a href="#" class="btn-launch-app">Launch App</a></li>
-            </ul>
-          </div>
-
-          <div class="footer-col">
-            <h4>Resources</h4>
-            <ul class="footer-links">
-              <li><a href="https://pyodide.org/" target="_blank">Pyodide Docs</a></li>
-              <li><a href="https://threejs.org/" target="_blank">Three.js Docs</a></li>
-              <li><a href="https://codemirror.net/" target="_blank">CodeMirror 6</a></li>
-            </ul>
-          </div>
-
-          <div class="footer-col">
-            <h4>Status</h4>
-            <div style="display: flex; align-items: center; gap: 0.5rem; color: #10b981; font-weight: 600; font-size: 0.9rem;">
-              <span class="pulse-dot"></span>
-              <span>Visualizer Online</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="footer-bottom">
-          <p>&copy; 2026 ProViz. All rights reserved.</p>
-          <p>Built with Three.js, Pyodide, and GSAP</p>
-        </div>
-      </footer>
-
-    </div>
-
-    <!-- LOGIN MODAL OVERLAY -->
-    <div id="login-overlay" style="display: none;">
-      <div class="login-card">
-        <button class="btn-close-modal btn-back-home" title="Close">&times;</button>
-        <div class="logo-box" style="margin: 0 auto 1.5rem auto; width: 48px; height: 48px;">
-          <svg viewBox="0 0 24 24" style="width: 28px; height: 28px;">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+  <!-- TOP OS GLOBAL HEADER BAR -->
+  <header id="os-global-header">
+    <div class="header-left">
+      <div class="os-brand">
+        <div class="os-logo-glow">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" fill="none" stroke="currentColor" stroke-width="2"/>
           </svg>
         </div>
-        <h2 style="margin-bottom: 0.5rem; font-size: 2rem;">Sign In to ProViz</h2>
-        <p style="margin-bottom: 2rem; color: #94a3b8; font-size: 0.95rem;">IITM BS &amp; University Account Authentication</p>
-        
-        <button id="btn-login" style="background: var(--gradient-button); color: white; border: none; padding: 0.9rem 1.5rem; border-radius: 10px; font-size: 1.05rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.75rem; width: 100%; box-shadow: 0 4px 20px rgba(37,99,235,0.4);">
-          <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#fff" d="M21.35 11.1h-9.17v2.73h5.51c-.24 1.27-.95 2.34-2.03 3.06v2.54h3.29c1.92-1.77 3.03-4.38 3.03-7.46 0-.71-.06-1.4-.17-2.07z"/><path fill="#fff" d="M12.18 21c2.75 0 5.06-.91 6.75-2.47l-3.29-2.54c-.91.61-2.07.97-3.46.97-2.66 0-4.91-1.79-5.71-4.21H3.07v2.62C4.77 18.73 8.19 21 12.18 21z"/><path fill="#fff" d="M6.47 12.75c-.2-.61-.31-1.26-.31-1.95s.11-1.34.31-1.95V6.23H3.07C2.39 7.59 2 9.12 2 10.8s.39 3.21 1.07 4.57l3.4-2.62z"/><path fill="#fff" d="M12.18 4.75c1.49 0 2.84.51 3.9 1.51l2.92-2.92C17.23 1.68 14.93 1 12.18 1 8.19 1 4.77 3.27 3.07 6.23l3.4 2.62c.8-2.42 3.05-4.1 5.71-4.1z"/></svg>
-          Sign in with Google
-        </button>
-        <p id="login-error" style="color: #ef4444; margin-top: 1rem; font-size: 0.9rem; min-height: 1.2rem;"></p>
-
-        <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color);">
-          <button class="btn-back-home" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.9rem;">← Back to Landing Page</button>
+        <div class="os-brand-text">
+          <span class="os-brand-title">ProViz <span class="os-version-tag">OS v36.0</span></span>
+          <span class="os-brand-sub">Autonomous Verification Operating System</span>
         </div>
+      </div>
+
+      <!-- Workspace selector -->
+      <div class="workspace-pill">
+        <span class="ws-icon">📁</span>
+        <select id="os-workspace-select" class="os-select-sm">
+          <option value="proviz-core">proviz-core-workspace (S0)</option>
+          <option value="distributed-cluster">distributed-cluster-node-1 (S12)</option>
+          <option value="security-sandbox">security-audit-sandbox (S4)</option>
+        </select>
       </div>
     </div>
 
-    <!-- APP WORKSPACE LAYOUT CONTAINER -->
-    <div id="layout-container" style="display: none;">
-      <div id="canvas-container">
-        <canvas id="app-canvas"></canvas>
+    <!-- Center: Main Studio Navigation Tabs -->
+    <nav class="os-main-nav">
+      <button class="nav-tab-btn active" data-view="os-control">
+        <span class="tab-icon">🚀</span>
+        <span>Autonomous OS</span>
+      </button>
+      <button class="nav-tab-btn" data-view="visualizer-3d">
+        <span class="tab-icon">🎨</span>
+        <span>3D Visualizer & Code</span>
+      </button>
+      <button class="nav-tab-btn" data-view="gates-studio">
+        <span class="tab-icon">🛡️</span>
+        <span>Multi-Domain Gates</span>
+      </button>
+      <button class="nav-tab-btn" data-view="continuous-loop">
+        <span class="tab-icon">🔄</span>
+        <span>Continuous Loop</span>
+      </button>
+      <button class="nav-tab-btn" data-view="project-intel">
+        <span class="tab-icon">📊</span>
+        <span>Project Intelligence</span>
+      </button>
+    </nav>
+
+    <!-- Header Right: System Status Badges & Quick Action Controls -->
+    <div class="header-right">
+      <div class="status-indicator-group">
+        <!-- OS State Badge -->
+        <div id="os-status-badge" class="os-badge badge-ready">
+          <span class="status-dot pulse"></span>
+          <span id="os-badge-state-text">READY (S0)</span>
+        </div>
+
+        <!-- Autonomy Level Picker -->
+        <div class="autonomy-badge-picker" title="Select Autonomy Policy Level">
+          <span class="autonomy-label">Autonomy:</span>
+          <select id="os-autonomy-level-picker" class="os-select-sm">
+            <option value="LEVEL_0_OBSERVE_ONLY">L0: Observe Only</option>
+            <option value="LEVEL_1_ADVISORY">L1: Advisory</option>
+            <option value="LEVEL_2_AUTO_VERIFY">L2: Auto Verify</option>
+            <option value="LEVEL_3_AUTO_REPAIR" selected>L3: Auto Repair (Recommended)</option>
+            <option value="LEVEL_4_AUTO_REFACTOR">L4: Auto Refactor</option>
+            <option value="LEVEL_5_FULL_AUTONOMOUS_OPERATION">L5: Full Autonomous</option>
+          </select>
+        </div>
+
+        <!-- System Health Badge -->
+        <div class="os-badge badge-health" title="Overall Subsystem Health">
+          <span class="health-icon">❤️</span>
+          <span id="os-health-value">100%</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN VIEWPORT CONTAINER -->
+  <main id="os-viewport-container">
+
+    <!-- =========================================================================
+         TAB 1: AUTONOMOUS VERIFICATION OS CONTROL CENTER (STAGE 36)
+         ========================================================================= -->
+    <section id="view-os-control" class="studio-viewport-panel active">
+      
+      <!-- Top Action Control Bar -->
+      <div class="os-action-banner">
+        <div class="banner-left">
+          <h2 class="banner-title">Autonomous Verification Control Plane</h2>
+          <p class="banner-desc">Policy-bounded coordinator orchestrating Stages 1–35 across formal, static, symbolic, empirical, security, performance, and concurrency verifiers.</p>
+        </div>
+        <div class="banner-actions">
+          <button id="btn-run-os-pipeline" class="btn btn-glow-cyan">
+            <span class="btn-icon">⚡</span>
+            <span>Run Full Autonomous Loop</span>
+          </button>
+          <button id="btn-evaluate-release-gate" class="btn btn-primary-glass">
+            <span class="btn-icon">🔍</span>
+            <span>Evaluate 11-Gate Release</span>
+          </button>
+          <button id="btn-auto-repair-acid" class="btn btn-primary-glass">
+            <span class="btn-icon">🛠️</span>
+            <span>Synthesize Auto-Repair</span>
+          </button>
+          <button id="btn-issue-unified-cert" class="btn btn-primary-glass">
+            <span class="btn-icon">📜</span>
+            <span>Issue Scoped Certificate</span>
+          </button>
+          <button id="btn-toggle-safemode-os" class="btn btn-danger-glass">
+            <span class="btn-icon">🛑</span>
+            <span id="btn-safemode-text">Safe Mode</span>
+          </button>
+          <button id="btn-export-audit-trail" class="btn btn-neutral-glass">
+            <span class="btn-icon">📋</span>
+            <span>Export Audit Trail</span>
+          </button>
+        </div>
       </div>
 
-      <div id="ui-sidebar">
-        <div class="header">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-            <h1>ProViz Simulator</h1>
-            <div style="display: flex; align-items: center; gap: 0.4rem;">
-              <button class="btn-back-home" title="Home Landing Page" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); color: white; padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 0.25rem;">
-                🏠 Home
-              </button>
-              <button id="btn-logout-sidebar" class="btn-logout-action" title="Log Out" style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                Logout
-              </button>
+      <!-- Autonomous Loop Lifecycle Step Visualizer -->
+      <div class="os-lifecycle-track-card">
+        <div class="track-header">
+          <span class="track-label">Autonomous 14-Phase Loop Engine</span>
+          <span class="track-status-text" id="track-active-phase">Current Phase: Awaiting Change or Goal Trigger</span>
+        </div>
+        <div class="lifecycle-steps-grid">
+          <div class="lc-step done" id="step-observe"><span class="step-num">1</span><span>Observe</span></div>
+          <div class="lc-step done" id="step-state"><span class="step-num">2</span><span>State Snapshot</span></div>
+          <div class="lc-step done" id="step-impact"><span class="step-num">3</span><span>Semantic Impact</span></div>
+          <div class="lc-step done" id="step-obligations"><span class="step-num">4</span><span>Obligations</span></div>
+          <div class="lc-step done" id="step-plan"><span class="step-num">5</span><span>Plan &amp; Schedule</span></div>
+          <div class="lc-step done" id="step-verify"><span class="step-num">6</span><span>Multi-Engine Verify</span></div>
+          <div class="lc-step done" id="step-diagnose"><span class="step-num">7</span><span>Diagnose Cause</span></div>
+          <div class="lc-step done" id="step-repair"><span class="step-num">8</span><span>Synthesize Patch</span></div>
+          <div class="lc-step done" id="step-reverify"><span class="step-num">9</span><span>Multi-Gate Reverify</span></div>
+          <div class="lc-step done" id="step-govern"><span class="step-num">10</span><span>Governance Check</span></div>
+          <div class="lc-step done" id="step-certify"><span class="step-num">11</span><span>Certify State</span></div>
+          <div class="lc-step done" id="step-commit"><span class="step-num">12</span><span>ACID Commit</span></div>
+        </div>
+      </div>
+
+      <!-- Main Dashboard 3-Column Grid -->
+      <div class="os-dashboard-grid">
+
+        <!-- Column 1: 11-Gate Verification Matrix & Unified Certificate -->
+        <div class="os-panel-card">
+          <div class="panel-card-header">
+            <h3>11-Gate Release Matrix</h3>
+            <span class="badge-tag green">11 / 11 Passing</span>
+          </div>
+
+          <div class="gates-list-container" id="os-gates-container">
+            <div class="gate-row pass">
+              <span class="gate-icon">✔</span>
+              <div class="gate-info">
+                <strong>Functional Safety &amp; Contracts</strong>
+                <span>Null safety, divide-by-zero, bounds verified</span>
+              </div>
+              <span class="gate-score">100%</span>
+            </div>
+
+            <div class="gate-row pass">
+              <span class="gate-icon">✔</span>
+              <div class="gate-info">
+                <strong>Security &amp; Threat Model</strong>
+                <span>OWASP/CWE taint tracking, input sanitization</span>
+              </div>
+              <span class="gate-score">PASS</span>
+            </div>
+
+            <div class="gate-row pass">
+              <span class="gate-icon">✔</span>
+              <div class="gate-info">
+                <strong>Concurrency &amp; Deadlocks</strong>
+                <span>Lock hierarchy acyclic, 0 data races detected</span>
+              </div>
+              <span class="gate-score">0 Races</span>
+            </div>
+
+            <div class="gate-row pass">
+              <span class="gate-icon">✔</span>
+              <div class="gate-info">
+                <strong>Performance &amp; Budgets</strong>
+                <span>Latency &lt; 50ms, memory quota within bounds</span>
+              </div>
+              <span class="gate-score">O(N)</span>
+            </div>
+
+            <div class="gate-row pass">
+              <span class="gate-icon">✔</span>
+              <div class="gate-info">
+                <strong>Architecture Governance</strong>
+                <span>Boundary integrity respected, 0 cyclic imports</span>
+              </div>
+              <span class="gate-score">100%</span>
+            </div>
+
+            <div class="gate-row pass">
+              <span class="gate-icon">✔</span>
+              <div class="gate-info">
+                <strong>Mutation Adequacy Score</strong>
+                <span>12/12 synthetic mutants killed across AST</span>
+              </div>
+              <span class="gate-score">100%</span>
+            </div>
+
+            <div class="gate-row pass">
+              <span class="gate-icon">✔</span>
+              <div class="gate-info">
+                <strong>Probabilistic Confidence</strong>
+                <span>Empirical stability verified (Empirical != Proof)</span>
+              </div>
+              <span class="gate-score">0.99</span>
+            </div>
+
+            <div class="gate-row pass">
+              <span class="gate-icon">✔</span>
+              <div class="gate-info">
+                <strong>Semantic Stability</strong>
+                <span>API contracts and equivalence preserved</span>
+              </div>
+              <span class="gate-score">STABLE</span>
+            </div>
+
+            <div class="gate-row pass">
+              <span class="gate-icon">✔</span>
+              <div class="gate-info">
+                <strong>Evidence Freshness</strong>
+                <span>No stale cache, live obligations satisfied</span>
+              </div>
+              <span class="gate-score">100%</span>
+            </div>
+
+            <div class="gate-row pass">
+              <span class="gate-icon">✔</span>
+              <div class="gate-info">
+                <strong>Transactional Rollback Check</strong>
+                <span>ACID checkpoints verified with deterministic replay</span>
+              </div>
+              <span class="gate-score">VERIFIED</span>
             </div>
           </div>
 
-          <!-- User profile status bar in sidebar -->
-          <div id="sidebar-user-pill" style="display: none; align-items: center; justify-content: space-between; gap: 0.5rem; background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.35rem 0.6rem; margin-bottom: 0.75rem; font-size: 0.8rem; color: var(--text-sub);">
-            <div style="display: flex; align-items: center; gap: 0.45rem; overflow: hidden;">
-              <div id="sidebar-user-avatar" class="nav-user-avatar" style="width: 20px; height: 20px; font-size: 0.7rem; flex-shrink: 0;">U</div>
-              <span id="sidebar-user-email" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+          <!-- Unified Certificate Card -->
+          <div class="certificate-preview-card">
+            <div class="cert-header">
+              <span class="cert-title">PROVIZ UNIFIED CERTIFICATE</span>
+              <span class="cert-badge" id="cert-badge-status">VALID</span>
             </div>
-            <span style="font-size: 0.7rem; color: #10b981; background: rgba(16,185,129,0.15); padding: 0.15rem 0.4rem; border-radius: 4px; flex-shrink: 0;">Active</span>
+            <div class="cert-body">
+              <div class="cert-line"><span class="cl-label">Fingerprint:</span> <span class="cl-val" id="cert-fingerprint-text">CERT_8E1CFE17_PROVIZ_OS_S0</span></div>
+              <div class="cert-line"><span class="cl-label">Scope:</span> <span class="cl-val">PROJECT_WIDE (Stages 1–36)</span></div>
+              <div class="cert-line"><span class="cl-label">Invariant:</span> <span class="cl-val">EmpiricalEvidence != FormalProof</span></div>
+              <div class="cert-line"><span class="cl-label">Revision:</span> <span class="cl-val" id="cert-rev-text">S0 (Immutable Hash: 0x9f3b...)</span></div>
+            </div>
           </div>
-          
-          <div class="problem-selector" style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem; align-items: center;">
-            <label for="question-select" style="font-weight: 600; white-space: nowrap;">Question:</label>
-            <select id="question-select" style="flex: 1; padding: 0.5rem; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 0.85rem;">
-              <!-- Options populated dynamically -->
+        </div>
+
+        <!-- Column 2: Real-time Append-Only Event Bus Journal -->
+        <div class="os-panel-card event-journal-panel">
+          <div class="panel-card-header">
+            <h3>Unified Event Bus Journal</h3>
+            <div class="journal-controls">
+              <span class="live-dot pulse"></span>
+              <span class="badge-tag">Append-Only</span>
+              <button id="btn-clear-journal" class="btn-xs">Clear View</button>
+            </div>
+          </div>
+
+          <!-- Event Filters -->
+          <div class="journal-filter-bar">
+            <button class="j-filter active" data-filter="all">All Events</button>
+            <button class="j-filter" data-filter="verification">Verification</button>
+            <button class="j-filter" data-filter="repair">Repairs</button>
+            <button class="j-filter" data-filter="governance">Governance</button>
+            <button class="j-filter" data-filter="security">Security</button>
+          </div>
+
+          <!-- Event Stream Log -->
+          <div class="event-stream-container" id="os-live-event-stream">
+            <div class="event-item info">
+              <span class="e-time">00:00:01</span>
+              <span class="e-tag">[OS_BOOT_COMPLETE]</span>
+              <span class="e-msg">ProViz Stage 36 Autonomous Verification OS booted cleanly.</span>
+            </div>
+            <div class="event-item info">
+              <span class="e-time">00:00:02</span>
+              <span class="e-tag">[CAPABILITIES_RESOLVED]</span>
+              <span class="e-msg">20 capability engines mapped across Stages 1–35 with 0 dependency cycles.</span>
+            </div>
+            <div class="event-item success">
+              <span class="e-time">00:00:03</span>
+              <span class="e-tag">[STATE_REVISION_S0]</span>
+              <span class="e-msg">Canonical unified project state snapshot created (Health: 100%, Confidence: 0.98).</span>
+            </div>
+            <div class="event-item success">
+              <span class="e-time">00:00:04</span>
+              <span class="e-tag">[AUTONOMY_POLICY_ACTIVE]</span>
+              <span class="e-msg">Policy set to LEVEL_3_AUTO_REPAIR. Safe sandboxing active.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Column 3: Resource Quotas, Decision Engine & Risk Gauge -->
+        <div class="os-panel-card">
+          <div class="panel-card-header">
+            <h3>Decision Engine &amp; Resources</h3>
+            <span class="badge-tag blue">Quotas Active</span>
+          </div>
+
+          <!-- Global Resource Quotas -->
+          <div class="resource-gauges-container">
+            <div class="gauge-item">
+              <div class="gauge-header"><span>CPU Quota (Stage 26/34)</span><strong>18% / 100%</strong></div>
+              <div class="gauge-track"><div class="gauge-fill" style="width: 18%;"></div></div>
+            </div>
+            <div class="gauge-item">
+              <div class="gauge-header"><span>Memory Allocation</span><strong>240 MB / 2048 MB</strong></div>
+              <div class="gauge-track"><div class="gauge-fill" style="width: 12%;"></div></div>
+            </div>
+            <div class="gauge-item">
+              <div class="gauge-header"><span>Solver SMT Calls</span><strong>14 calls / 500 max</strong></div>
+              <div class="gauge-track"><div class="gauge-fill" style="width: 3%;"></div></div>
+            </div>
+            <div class="gauge-item">
+              <div class="gauge-header"><span>Worker Threads</span><strong>4 / 8 active</strong></div>
+              <div class="gauge-track"><div class="gauge-fill" style="width: 50%;"></div></div>
+            </div>
+          </div>
+
+          <!-- Global Decision Engine Heuristic Scorecard -->
+          <div class="decision-scorecard-card">
+            <h4>Global Decision Scorecard</h4>
+            <div class="decision-formula-text">
+              $$Score = Evidence \times Coverage \times Freshness \times Policy - Risk - Cost$$
+            </div>
+            <div class="score-metrics-grid">
+              <div class="sm-item"><span class="sm-label">Evidence Strength:</span><span class="sm-val">0.96</span></div>
+              <div class="sm-item"><span class="sm-label">Coverage:</span><span class="sm-val">94%</span></div>
+              <div class="sm-item"><span class="sm-label">Freshness:</span><span class="sm-val">0.99</span></div>
+              <div class="sm-item"><span class="sm-label">Residual Risk:</span><span class="sm-val text-green">0.02</span></div>
+            </div>
+            <div class="decision-result-pill pass" id="os-decision-pill">
+              <span>Recommendation: <strong>ACCEPT &amp; COMMIT</strong></span>
+            </div>
+          </div>
+
+          <!-- Transaction Lineage Timeline -->
+          <div class="transaction-timeline-box">
+            <h4>ACID State Lineage</h4>
+            <div class="tx-list">
+              <div class="tx-item active">
+                <span class="tx-rev">S0</span>
+                <span class="tx-desc">Base Initial State Checkpoint</span>
+                <span class="tx-time">00:00:03</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- =========================================================================
+         TAB 2: 3D CODE VISUALIZER & PLAYGROUND (STAGES 1–14)
+         ========================================================================= -->
+    <section id="view-visualizer-3d" class="studio-viewport-panel">
+      
+      <!-- Left Panel: Python CodeMirror Editor & Presets -->
+      <div class="viz-sidebar-left">
+        <div class="editor-header-bar">
+          <div class="preset-dropdown-box">
+            <label for="question-select">Algorithm Preset:</label>
+            <select id="question-select" class="os-select-sm">
+              <!-- Populated dynamically with questions + scratchpad -->
             </select>
           </div>
-          <div id="error-msg" class="error-text"></div>
-        </div>
-
-        <div class="controls-panel" style="flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding-right: 4px; gap: 0.75rem;">
-          <div class="step-info">
-            <h2 id="question-title">Question Title</h2>
-            <p id="question-desc" style="white-space: pre-wrap; font-size: 0.85rem;">Question description...</p>
-          </div>
-          
-          <!-- Mode Tabs -->
-          <div class="mode-tabs">
-            <button id="tab-user" class="mode-tab mode-tab--active" data-mode="user">✏️ Try Yourself</button>
-            <button id="tab-solution" class="mode-tab" data-mode="solution">💡 View Solution</button>
-          </div>
-
-          <!-- Code Panel -->
-          <div class="code-container" style="display: flex; flex-direction: column; min-height: 180px; max-height: 280px; margin-top: 0;">
-            <div class="code-header" style="display: flex; justify-content: space-between; align-items: center;">
-              <span id="code-header-title">Python Editor</span>
-              <button id="btn-fullscreen" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem;" title="Toggle Fullscreen">⛶</button>
-            </div>
-            <div id="editor-container" style="flex: 1; background: #1e1e1e; overflow: hidden; border-radius: 0 0 8px 8px;">
-              <!-- CodeMirror injected here -->
-            </div>
-          </div>
-
-          <!-- Explanation Panel -->
-          <div id="explanation-panel" class="explanation-panel">
-            <div class="exp-badges" id="exp-badges">
-              <span class="exp-badge exp-badge--idle">Idle</span>
-            </div>
-            <div class="exp-primary" id="exp-primary">Run your code to start the visualization.</div>
-            <div class="exp-secondary" id="exp-secondary"></div>
-          </div>
-
-          <!-- Variables & Inspector Panel -->
-          <div id="variables-panel" class="variables-panel" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-              <div class="panel-label" style="margin-bottom: 0;">🔍 Inspector &amp; Dataflow</div>
-              <div style="display: flex; gap: 0.25rem;">
-                <button id="tab-inspector-vars" class="inspector-tab inspector-tab--active" title="Variables View">Scope</button>
-                <button id="tab-inspector-heap" class="inspector-tab" title="Heap Explorer">Heap</button>
-                <button id="tab-inspector-watches" class="inspector-tab" title="Watch Expressions">Watches</button>
-                <button id="tab-inspector-dataflow" class="inspector-tab" title="Dataflow &amp; Dependencies">Dataflow</button>
-              </div>
-            </div>
-            <div id="heap-search-box" style="display: none; margin-bottom: 0.5rem;">
-              <input type="text" id="heap-search-input" placeholder="Search heap objects, IDs, types..." style="width: 100%; padding: 0.3rem 0.6rem; border-radius: 4px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 0.75rem; font-family: var(--font-mono);">
-            </div>
-            <div id="watch-input-box" style="display: none; margin-bottom: 0.5rem;">
-              <div style="display: flex; gap: 0.3rem;">
-                <input type="text" id="watch-new-input" placeholder="Add expression (e.g. user.name, items[0], a is b)..." style="flex: 1; padding: 0.3rem 0.6rem; border-radius: 4px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 0.75rem; font-family: var(--font-mono);">
-                <button id="btn-add-watch" style="padding: 0.3rem 0.6rem; background: var(--accent-indigo); color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-weight: 600;">+ Add</button>
-              </div>
-            </div>
-            <div id="dataflow-controls-box" style="display: none; margin-bottom: 0.5rem;">
-              <div style="display: flex; gap: 0.3rem;">
-                <input type="text" id="dataflow-target-input" placeholder="Target variable or object (e.g. x, total, obj_1)..." style="flex: 1; padding: 0.3rem 0.6rem; border-radius: 4px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 0.75rem; font-family: var(--font-mono);">
-                <button id="btn-df-origin" style="padding: 0.3rem 0.5rem; background: var(--accent-indigo); color: white; border: none; border-radius: 4px; font-size: 0.7rem; cursor: pointer; font-weight: 600;">Origins</button>
-                <button id="btn-df-dependents" style="padding: 0.3rem 0.5rem; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; font-size: 0.7rem; cursor: pointer; font-weight: 600;">Impact</button>
-              </div>
-            </div>
-            <div id="variables-container" class="variables-container"></div>
-          </div>
-
-          <!-- Call Stack Panel -->
-          <div id="call-stack-panel" class="call-stack-panel" style="display: none;">
-            <div class="panel-label">📚 Call Stack</div>
-            <div id="call-stack-container" class="cs-container"></div>
-          </div>
-
-          <!-- Playback Controls -->
-          <div class="playback-controls" id="playback-controls" style="display: none;">
-            <div class="pb-progress">
-              <span id="pb-counter" class="pb-counter-text">0 / 0</span>
-              <div class="pb-bar-track">
-                <div class="pb-bar-fill" id="pb-bar-fill" style="width: 0%"></div>
-              </div>
-            </div>
-            <div class="pb-buttons">
-              <button id="btn-restart" class="pb-btn" title="Restart">⟳</button>
-              <button id="btn-prev" class="pb-btn" title="Previous Step">◀</button>
-              <button id="btn-play-pause" class="pb-btn pb-btn--primary" title="Play/Pause">▶ Play</button>
-              <button id="btn-next" class="pb-btn" title="Next Step">▶</button>
-            </div>
-            <div class="pb-speed">
-              <label for="speed-slider">Speed</label>
-              <input type="range" id="speed-slider" min="100" max="2000" value="700" step="100">
-              <span id="speed-label">0.7s</span>
-            </div>
+          <div class="editor-actions">
+            <button id="btn-run" class="btn btn-primary" title="Execute and trace in 3D">▶ Run Code</button>
+            <button id="btn-reset" class="btn btn-neutral" title="Reset Scene">↺ Reset</button>
           </div>
         </div>
 
-        <!-- Action Buttons (Pinned at Sidebar Bottom) -->
-        <div class="buttons" style="padding-top: 0.75rem; display: flex; gap: 0.5rem; flex-shrink: 0; border-top: 1px solid rgba(255,255,255,0.08);">
-          <button id="btn-run" class="primary" style="flex: 1; padding: 0.75rem 1rem; font-size: 0.95rem; font-weight: 700; cursor: pointer;">▶ Run Code</button>
-          <button id="btn-reset" class="reset" style="padding: 0.75rem 1rem; font-size: 0.95rem; font-weight: 600; cursor: pointer;">↺ Reset</button>
+        <!-- CodeMirror Editor -->
+        <div id="editor-container" class="codemirror-wrapper"></div>
+
+        <!-- Explanation & Step-by-Step Info -->
+        <div id="explanation-panel" class="explanation-box">
+          <div class="exp-badges" id="exp-badges">
+            <span class="exp-badge exp-badge--idle">Ready</span>
+          </div>
+          <div class="exp-primary" id="exp-primary">Press "Run Code" to execute Python with Pyodide and visualize execution in 3D.</div>
+          <div class="exp-secondary" id="exp-secondary"></div>
+        </div>
+
+        <!-- Scope / Heap / Watch Inspector -->
+        <div class="inspector-subpanel">
+          <div class="inspector-tabs-row">
+            <button id="tab-inspector-vars" class="insp-tab active">Variables</button>
+            <button id="tab-inspector-heap" class="insp-tab">Heap Graph</button>
+            <button id="tab-inspector-watches" class="insp-tab">Watches</button>
+          </div>
+          <div id="variables-container" class="inspector-content-area"></div>
+        </div>
+
+        <!-- Time-Travel Playback Scrubber -->
+        <div class="playback-controls-bar" id="playback-controls">
+          <div class="pb-buttons">
+            <button id="btn-restart" class="pb-btn" title="Restart">⟳</button>
+            <button id="btn-prev" class="pb-btn" title="Step Back">◀</button>
+            <button id="btn-play-pause" class="pb-btn pb-btn--primary" title="Play">▶ Play</button>
+            <button id="btn-next" class="pb-btn" title="Step Forward">▶</button>
+          </div>
+          <div class="pb-progress">
+            <span id="pb-counter" class="pb-counter-text">Step 0 / 0</span>
+            <div class="pb-bar-track">
+              <div class="pb-bar-fill" id="pb-bar-fill" style="width: 0%"></div>
+            </div>
+          </div>
+          <div class="pb-speed">
+            <label for="speed-slider">Speed</label>
+            <input type="range" id="speed-slider" min="100" max="2000" value="700" step="100">
+            <span id="speed-label">0.7s</span>
+          </div>
         </div>
       </div>
-    </div>
-    
-    <script type="module" src="/main.js"></script>
-  </body>
+
+      <!-- Right Panel: Three.js 3D Interactive Canvas -->
+      <div class="viz-canvas-area" id="canvas-container">
+        <canvas id="app-canvas"></canvas>
+        <div class="canvas-floating-controls">
+          <span class="canvas-tag">Three.js 3D WebGL Engine (OrbitControls Active)</span>
+          <span class="canvas-hint">Left click: Rotate | Right click: Pan | Scroll: Zoom</span>
+        </div>
+      </div>
+
+    </section>
+
+
+    <!-- =========================================================================
+         TAB 3: MULTI-DOMAIN VERIFICATION GATES (STAGES 31–33)
+         ========================================================================= -->
+    <section id="view-gates-studio" class="studio-viewport-panel">
+      <div class="gates-studio-container">
+        
+        <!-- Gate 1: Security Verifier (Stage 31) -->
+        <div class="domain-card">
+          <div class="domain-card-header">
+            <div class="domain-title">
+              <span class="domain-icon">🛡️</span>
+              <div>
+                <h3>Stage 31 — Security &amp; Threat Verification</h3>
+                <span>OWASP Top 10, CWE Taint Propagation &amp; Adversarial Invariants</span>
+              </div>
+            </div>
+            <span class="badge-tag green">0 Vulnerabilities</span>
+          </div>
+          <div class="domain-body">
+            <div class="domain-metrics">
+              <div class="dm-box"><span>Taint Sinks Analyzed:</span><strong>42</strong></div>
+              <div class="dm-box"><span>Sanitizer Coverage:</span><strong>100%</strong></div>
+              <div class="dm-box"><span>Attack Surface Score:</span><strong class="text-green">A+ (0.98)</strong></div>
+            </div>
+            <div class="domain-log">
+              <p>✔ Static taint analysis verified: No unsanitized user inputs reach execution sinks.</p>
+              <p>✔ Cryptographic assertions verified: Constant-time comparison invariant preserved.</p>
+              <p>✔ Memory boundary checker: 0 buffer overflow / heap corruption vulnerabilities.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gate 2: Performance & Reliability (Stage 32) -->
+        <div class="domain-card">
+          <div class="domain-card-header">
+            <div class="domain-title">
+              <span class="domain-icon">⚡</span>
+              <div>
+                <h3>Stage 32 — Performance &amp; Resource Profiling</h3>
+                <span>Asymptotic Complexity, Flamegraphs &amp; Memory Allocation Quotas</span>
+              </div>
+            </div>
+            <span class="badge-tag green">O(N) Optimal</span>
+          </div>
+          <div class="domain-body">
+            <div class="domain-metrics">
+              <div class="dm-box"><span>Wall-clock Latency:</span><strong>12.4 ms</strong></div>
+              <div class="dm-box"><span>Peak Heap Delta:</span><strong>+1.2 MB</strong></div>
+              <div class="dm-box"><span>Complexity Class:</span><strong class="text-cyan">Linear O(N)</strong></div>
+            </div>
+            <div class="domain-log">
+              <p>✔ Algorithmic complexity verified: Loop execution scale strictly linear with input size.</p>
+              <p>✔ Garbage collection pressure verified: 0 memory leaks across 10,000 synthetic iterations.</p>
+              <p>✔ Budget SLA satisfied: Peak response time 12.4ms (SLA threshold: 100ms).</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gate 3: Concurrency & Temporal Verification (Stage 33) -->
+        <div class="domain-card">
+          <div class="domain-card-header">
+            <div class="domain-title">
+              <span class="domain-icon">🔀</span>
+              <div>
+                <h3>Stage 33 — Concurrency &amp; Temporal Verifier</h3>
+                <span>Deadlock Detection, Thread Interleavings &amp; LTL Property Model Checking</span>
+              </div>
+            </div>
+            <span class="badge-tag green">0 Data Races</span>
+          </div>
+          <div class="domain-body">
+            <div class="domain-metrics">
+              <div class="dm-box"><span>Thread Interleavings:</span><strong>128 Explored</strong></div>
+              <div class="dm-box"><span>Lock Hierarchy Cycle:</span><strong>None (Acyclic)</strong></div>
+              <div class="dm-box"><span>LTL Liveness Formula:</span><strong class="text-green">Satisfied (G F p)</strong></div>
+            </div>
+            <div class="domain-log">
+              <p>✔ Lock ordering graph analyzed: Strict partial order maintained across all mutex acquisitions.</p>
+              <p>✔ Happens-Before data race analyzer: All shared memory accesses protected by synchronization barriers.</p>
+              <p>✔ Temporal safety verified: State invariants hold across all explored thread schedules.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- =========================================================================
+         TAB 4: CONTINUOUS AUTONOMOUS VERIFICATION LOOP (STAGE 34)
+         ========================================================================= -->
+    <section id="view-continuous-loop" class="studio-viewport-panel">
+      <div class="continuous-studio-grid">
+        
+        <div class="os-panel-card">
+          <div class="panel-card-header">
+            <h3>Live Change Watcher &amp; Obligations</h3>
+            <span class="badge-tag cyan">Continuous Mode Active</span>
+          </div>
+          <div class="change-stream-box">
+            <div class="cs-item">
+              <span class="cs-file">src/math/solver.py</span>
+              <span class="cs-diff text-green">+12 lines modified</span>
+              <span class="cs-status">Obligations Synthesized</span>
+            </div>
+            <div class="cs-item">
+              <span class="cs-file">src/arrays/transform.py</span>
+              <span class="cs-diff text-muted">0 changes</span>
+              <span class="cs-status">Up to Date</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="os-panel-card">
+          <div class="panel-card-header">
+            <h3>Autonomous Self-Healing Repair Stream</h3>
+            <span class="badge-tag green">CEGAR Active</span>
+          </div>
+          <div class="repair-stream-box">
+            <div class="rs-item">
+              <div class="rs-head">
+                <span class="rs-finding text-amber">Finding: Potential Zero-Division in solver.py:24</span>
+                <span class="rs-time">Auto-Resolved</span>
+              </div>
+              <div class="rs-code">
+                <code>- result = total / count</code><br>
+                <code>+ result = total / count if count != 0 else 0.0</code>
+              </div>
+              <div class="rs-verdict text-green">✔ Verified by Z3 SMT Solver &amp; 100% Mutation Killed</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- =========================================================================
+         TAB 5: PROJECT INTELLIGENCE & ARCHITECTURE GOVERNANCE (STAGE 35)
+         ========================================================================= -->
+    <section id="view-project-intel" class="studio-viewport-panel">
+      <div class="intel-studio-grid">
+        
+        <!-- Project Health & Technical Debt -->
+        <div class="os-panel-card">
+          <div class="panel-card-header">
+            <h3>Project Health &amp; Risk Radial Score</h3>
+            <span class="badge-tag green">Health: 100%</span>
+          </div>
+          <div class="health-radial-display">
+            <div class="radial-circle">
+              <span class="radial-score">98.4</span>
+              <span class="radial-unit">/ 100</span>
+            </div>
+            <div class="radial-metrics-list">
+              <div class="rm-row"><span>Security Posture:</span><strong class="text-green">99.0%</strong></div>
+              <div class="rm-row"><span>Concurrency Safety:</span><strong class="text-green">100.0%</strong></div>
+              <div class="rm-row"><span>Performance Health:</span><strong class="text-cyan">97.5%</strong></div>
+              <div class="rm-row"><span>Architecture Governance:</span><strong class="text-green">98.0%</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Architecture Dependency Matrix -->
+        <div class="os-panel-card">
+          <div class="panel-card-header">
+            <h3>Architecture Boundary Governance</h3>
+            <span class="badge-tag blue">Clean Boundaries</span>
+          </div>
+          <div class="arch-governance-box">
+            <div class="ag-row"><span>Cyclic Module Dependencies:</span><strong class="text-green">0 (Acyclic)</strong></div>
+            <div class="ag-row"><span>Orphan Specifications:</span><strong class="text-green">0</strong></div>
+            <div class="ag-row"><span>Layering Violations:</span><strong class="text-green">0 Violations</strong></div>
+            <div class="ag-row"><span>Policy Precedence:</span><strong>Safety &gt; Security &gt; Governance &gt; Autonomy</strong></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <script type="module" src="/main.js"></script>
+</body>
 </html>

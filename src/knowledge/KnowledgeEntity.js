@@ -1,5 +1,8 @@
 import { KnowledgeEntityKind } from './KnowledgeEntityKind.js';
 
+const EMPTY_ARR = Object.freeze([]);
+const EMPTY_OBJ = Object.freeze({});
+
 /**
  * Immutable canonical entity in the universal verification knowledge graph
  */
@@ -12,11 +15,11 @@ export class KnowledgeEntity {
     sourceLocation = null, // { file, line, column, endLine, endColumn }
     creationStage = 1,
     semanticFingerprint = null,
-    timestamps = { created: Date.now(), updated: Date.now() },
-    parentEntities = [],
-    relatedArtifacts = [],
-    attributes = {},
-    metadata = {}
+    timestamps = null,
+    parentEntities = null,
+    relatedArtifacts = null,
+    attributes = null,
+    metadata = null
   } = {}) {
     if (!id) {
       throw new Error('KnowledgeEntity requires an id');
@@ -29,14 +32,14 @@ export class KnowledgeEntity {
     this.sourceLocation = sourceLocation ? Object.freeze({ ...sourceLocation }) : null;
     this.creationStage = creationStage;
     this.semanticFingerprint = semanticFingerprint || `${this.kind}:${this.name}:${this.id}`;
-    this.timestamps = Object.freeze({
-      created: timestamps?.created ?? Date.now(),
-      updated: timestamps?.updated ?? Date.now()
-    });
-    this.parentEntities = Object.freeze([...new Set(parentEntities)]);
-    this.relatedArtifacts = Object.freeze([...new Set(relatedArtifacts)]);
-    this.attributes = Object.freeze({ ...attributes });
-    this.metadata = Object.freeze({ ...metadata });
+    this.timestamps = timestamps ? Object.freeze({
+      created: timestamps.created ?? Date.now(),
+      updated: timestamps.updated ?? Date.now()
+    }) : Object.freeze({ created: Date.now(), updated: Date.now() });
+    this.parentEntities = parentEntities && parentEntities.length > 0 ? Object.freeze([...new Set(parentEntities)]) : EMPTY_ARR;
+    this.relatedArtifacts = relatedArtifacts && relatedArtifacts.length > 0 ? Object.freeze([...new Set(relatedArtifacts)]) : EMPTY_ARR;
+    this.attributes = attributes && Object.keys(attributes).length > 0 ? Object.freeze({ ...attributes }) : EMPTY_OBJ;
+    this.metadata = metadata && Object.keys(metadata).length > 0 ? Object.freeze({ ...metadata }) : EMPTY_OBJ;
     Object.freeze(this);
   }
 

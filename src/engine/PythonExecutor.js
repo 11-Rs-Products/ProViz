@@ -329,6 +329,18 @@ def _run_user_code(code_str):
     }
 
     /**
+     * Run Python code with automatic initialization.
+     * @param {string|ExecutionRequest|object} input
+     * @returns {Promise<object>}
+     */
+    async run(input) {
+        if (!this.isReady) {
+            await this.init();
+        }
+        return await this.execute(input);
+    }
+
+    /**
      * Execute Python code or ExecutionRequest and return a canonical Universal Execution Trace (UET) with Heap Graph.
      *
      * @param {string|ExecutionRequest|object} input - Python code or ExecutionRequest
@@ -336,7 +348,7 @@ def _run_user_code(code_str):
      */
     async execute(input) {
         if (!this.isReady) {
-            throw new Error('[PythonExecutor] Not initialized. Call init() first.');
+            await this.init();
         }
 
         const request = input instanceof ExecutionRequest ? input : createExecutionRequest(input);

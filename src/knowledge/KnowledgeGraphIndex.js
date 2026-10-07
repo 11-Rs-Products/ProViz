@@ -14,24 +14,40 @@ export class KnowledgeGraphIndex {
 
   indexEntity(entity) {
     // 1. By Kind
-    if (!this.byKind.has(entity.kind)) this.byKind.set(entity.kind, new Set());
-    this.byKind.get(entity.kind).add(entity.id);
+    let kSet = this.byKind.get(entity.kind);
+    if (!kSet) {
+      kSet = new Set();
+      this.byKind.set(entity.kind, kSet);
+    }
+    kSet.add(entity.id);
 
     // 2. By Stage
-    if (!this.byStage.has(entity.creationStage)) this.byStage.set(entity.creationStage, new Set());
-    this.byStage.get(entity.creationStage).add(entity.id);
+    let sSet = this.byStage.get(entity.creationStage);
+    if (!sSet) {
+      sSet = new Set();
+      this.byStage.set(entity.creationStage, sSet);
+    }
+    sSet.add(entity.id);
 
     // 3. By File
     const file = entity.sourceLocation?.file || entity.sourceArtifact;
     if (file) {
-      if (!this.byFile.has(file)) this.byFile.set(file, new Set());
-      this.byFile.get(file).add(entity.id);
+      let fSet = this.byFile.get(file);
+      if (!fSet) {
+        fSet = new Set();
+        this.byFile.set(file, fSet);
+      }
+      fSet.add(entity.id);
     }
 
     // 4. By Symbol / Name
     if (entity.name) {
-      if (!this.bySymbol.has(entity.name)) this.bySymbol.set(entity.name, new Set());
-      this.bySymbol.get(entity.name).add(entity.id);
+      let symSet = this.bySymbol.get(entity.name);
+      if (!symSet) {
+        symSet = new Set();
+        this.bySymbol.set(entity.name, symSet);
+      }
+      symSet.add(entity.id);
     }
   }
 

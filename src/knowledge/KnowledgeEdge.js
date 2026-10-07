@@ -1,5 +1,8 @@
 import { KnowledgeRelationKind } from './KnowledgeRelationKind.js';
 
+const EMPTY_ARR = Object.freeze([]);
+const EMPTY_OBJ = Object.freeze({});
+
 /**
  * Immutable semantic relationship edge in the verification knowledge graph
  */
@@ -10,13 +13,13 @@ export class KnowledgeEdge {
     target,
     relation = KnowledgeRelationKind.DEPENDS_ON,
     confidence = 1.0,
-    evidenceReferences = [],
+    evidenceReferences = null,
     provenance = null,
     scope = 'GLOBAL',
     environment = null,
-    temporalValidity = { validFrom: Date.now(), validUntil: null },
+    temporalValidity = null,
     derivationStage = 1,
-    metadata = {}
+    metadata = null
   } = {}) {
     if (!source || !target) {
       throw new Error('KnowledgeEdge requires source and target');
@@ -26,17 +29,17 @@ export class KnowledgeEdge {
     this.source = source;
     this.target = target;
     this.relation = relation;
-    this.confidence = Math.max(0, Math.min(1, confidence));
-    this.evidenceReferences = Object.freeze([...new Set(evidenceReferences)]);
+    this.confidence = typeof confidence === 'number' ? (confidence > 1 ? 1 : confidence < 0 ? 0 : confidence) : 1.0;
+    this.evidenceReferences = evidenceReferences && evidenceReferences.length > 0 ? Object.freeze([...new Set(evidenceReferences)]) : EMPTY_ARR;
     this.provenance = provenance;
     this.scope = scope;
     this.environment = environment;
-    this.temporalValidity = Object.freeze({
-      validFrom: temporalValidity?.validFrom ?? Date.now(),
-      validUntil: temporalValidity?.validUntil ?? null
-    });
+    this.temporalValidity = temporalValidity ? Object.freeze({
+      validFrom: temporalValidity.validFrom ?? Date.now(),
+      validUntil: temporalValidity.validUntil ?? null
+    }) : Object.freeze({ validFrom: Date.now(), validUntil: null });
     this.derivationStage = derivationStage;
-    this.metadata = Object.freeze({ ...metadata });
+    this.metadata = metadata && Object.keys(metadata).length > 0 ? Object.freeze({ ...metadata }) : EMPTY_OBJ;
     Object.freeze(this);
   }
 
