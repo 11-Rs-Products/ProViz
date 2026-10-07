@@ -1,0 +1,10 @@
+/**
+ * Policies for evaluating multi-agent evidence consensus
+ */
+export const ConsensusPolicy = Object.freeze({
+  FORMAL_DOMINANCE: 'FORMAL_DOMINANCE',
+  STRICT_AGREEMENT: 'STRICT_AGREEMENT',
+  WEIGHTED_EVIDENCE: 'WEIGHTED_EVIDENCE',
+  INDEPENDENT_CONFIRMATION: 'INDEPENDENT_CONFIRMATION',
+  CONSERVATIVE: 'CONSERVATIVE'
+});

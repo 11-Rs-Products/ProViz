@@ -57,6 +57,11 @@ import { SpecificationRefiner } from '../specification/SpecificationRefiner.js';
 import { WorkspaceSnapshot } from '../workspace/WorkspaceSnapshot.js';
 import { SourceFile } from '../workspace/SourceFile.js';
 import * as Exploration from '../exploration/index.js';
+import * as Probabilistic from '../probabilistic/index.js';
+import * as Planning from '../planning/index.js';
+import * as Orchestration from '../orchestration/index.js';
+import * as Federation from '../federation/index.js';
+import * as Knowledge from '../knowledge/index.js';
 
 
 export class Debugger {
@@ -81,6 +86,12 @@ export class Debugger {
 
         this._explorationCampaigns = new Map();
         this._currentExplorationCampaign = null;
+
+        this._probabilisticEngine = new Probabilistic.ProbabilisticEngine();
+        this._planningEngine = new Planning.PlanningEngine();
+        this._orchestrationEngine = new Orchestration.OrchestrationEngine();
+        this._federationEngine = new Federation.FederationEngine();
+        this._knowledgeEngine = new Knowledge.KnowledgeEngine();
 
         // Synchronize with playback engine frame changes
         this._playbackEngine.onFrameChange((frame, eventType, runtimeState) => {
@@ -2059,6 +2070,680 @@ export class Debugger {
         if (!campaign) return 'Campaign not found';
         const finding = campaign.findings.find(f => f.id === findingId) || campaign.findings[0];
         return Exploration.ExplorationExplainer.explain(finding);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Stage 24: Probabilistic Behavioral Modeling & Continuous Verification API
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    createProbabilisticCampaign(options = {}) {
+        return this._probabilisticEngine.createCampaign(options);
+    }
+
+    startProbabilisticVerification(campaignId = null) {
+        const campaign = campaignId ? this._probabilisticEngine.campaigns.get(campaignId) : this._probabilisticEngine.activeCampaign;
+        if (!campaign) throw new Error(`Probabilistic campaign ${campaignId} not found`);
+        return campaign.run();
+    }
+
+    pauseProbabilisticVerification(campaignId = null) {
+        const campaign = campaignId ? this._probabilisticEngine.campaigns.get(campaignId) : this._probabilisticEngine.activeCampaign;
+        if (campaign) campaign.session.pause();
+        return campaign;
+    }
+
+    resumeProbabilisticVerification(campaignId = null) {
+        const campaign = campaignId ? this._probabilisticEngine.campaigns.get(campaignId) : this._probabilisticEngine.activeCampaign;
+        if (campaign) campaign.session.resume();
+        return campaign;
+    }
+
+    stepProbabilisticVerification(campaignId = null) {
+        const campaign = campaignId ? this._probabilisticEngine.campaigns.get(campaignId) : this._probabilisticEngine.activeCampaign;
+        if (campaign) campaign.session.step();
+        return campaign;
+    }
+
+    getEvidence(subject) {
+        return this._probabilisticEngine.evidenceSet.getBySubject(subject);
+    }
+
+    getEvidenceGraph() {
+        return this._probabilisticEngine.evidenceGraph;
+    }
+
+    getEvidenceConflicts(subject = null) {
+        if (subject) {
+            return this._probabilisticEngine.queries.getConflictingEvidence(subject);
+        }
+        return Array.from(this._probabilisticEngine.confidences.values()).flatMap(c => c.conflicts);
+    }
+
+    getBehaviorDistribution(subject) {
+        return this._probabilisticEngine.getBehaviorDistribution(subject);
+    }
+
+    getBehaviorProbability(subject, behavior) {
+        return this._probabilisticEngine.queries.getBehaviorProbability(subject, behavior);
+    }
+
+    getSpecificationConfidence(specId) {
+        return this._probabilisticEngine.queries.getSpecificationConfidence(specId);
+    }
+
+    getSpecificationUncertainty(specId) {
+        return this._probabilisticEngine.queries.getSpecificationUncertainty(specId);
+    }
+
+    getOracleConfidence(oracleId) {
+        return this._probabilisticEngine.queries.getOracleConfidence(oracleId);
+    }
+
+    getAnomalies() {
+        return this._probabilisticEngine.anomalies;
+    }
+
+    getRareBehaviors() {
+        return this._probabilisticEngine.rareBehaviors;
+    }
+
+    getFlakyTests() {
+        return this._probabilisticEngine.flakyTests;
+    }
+
+    getBehaviorShifts() {
+        return this._probabilisticEngine.statisticalRegressions;
+    }
+
+    getStatisticalRegressions() {
+        return this._probabilisticEngine.statisticalRegressions;
+    }
+
+    getVerificationHealth() {
+        return this._probabilisticEngine.getHealth();
+    }
+
+    getVerificationRisk(subject = 'overall') {
+        return this._probabilisticEngine.getOverallRisk(subject);
+    }
+
+    getNextBestExperiment(candidates = [], policy = { favorUncertaintyReduction: true }) {
+        return this._probabilisticEngine.getNextBestExperiment(candidates, policy);
+    }
+
+    runContinuousVerification(options = {}) {
+        const cont = new Probabilistic.ContinuousVerification(new Probabilistic.VerificationPolicy(options));
+        return cont;
+    }
+
+    scheduleReverification(options = {}) {
+        return Probabilistic.ReverificationPlanner.plan(options.subjects || [], options.context || {});
+    }
+
+    getProbabilisticSnapshot() {
+        return this._probabilisticEngine.getSnapshot();
+    }
+
+    explainConfidence(subject) {
+        const conf = this._probabilisticEngine.confidences.get(subject) || this._probabilisticEngine.calibrateConfidence(subject);
+        return conf ? conf.explanation : 'No confidence record for subject';
+    }
+
+    explainUncertainty(subject) {
+        const conf = this._probabilisticEngine.confidences.get(subject);
+        return conf ? `Uncertainty score: ${(1.0 - conf.score).toFixed(4)}` : 'Unknown uncertainty';
+    }
+
+    explainAnomaly(anomalyId) {
+        const anomaly = this._probabilisticEngine.anomalies.find(a => a.id === anomalyId) || this._probabilisticEngine.anomalies[0];
+        return anomaly ? anomaly.explanation?.difference || anomaly.explanation?.observedBehavior || 'Anomaly details unavailable' : 'Anomaly not found';
+    }
+
+    explainRisk(subject) {
+        const risk = this._probabilisticEngine.getOverallRisk(subject);
+        return risk.explanation ? risk.explanation.summary : `Risk level: ${risk.level}`;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Stage 25: Autonomous Verification Planning & Experiment Selection API
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    createVerificationPlan(options = {}) {
+        const session = this._planningEngine.createSession(options);
+        return session;
+    }
+
+    startVerificationPlan(planId = null) {
+        return this._planningEngine.executeNextExperiment();
+    }
+
+    pauseVerificationPlan(planId = null) {
+        if (this._planningEngine.activeSession) this._planningEngine.activeSession.pause();
+        return this._planningEngine.activeSession;
+    }
+
+    resumeVerificationPlan(planId = null) {
+        if (this._planningEngine.activeSession) this._planningEngine.activeSession.resume();
+        return this._planningEngine.activeSession;
+    }
+
+    stepVerificationPlan(planId = null, executorFn = null, context = {}) {
+        return this._planningEngine.executeNextExperiment(executorFn, context);
+    }
+
+    getVerificationGoals() {
+        return this._planningEngine.goals;
+    }
+
+    getVerificationGoal(goalId) {
+        return this._planningEngine.queries.getGoal(goalId);
+    }
+
+    getEvidenceGaps() {
+        return this._planningEngine.gaps;
+    }
+
+    getExperimentCandidates() {
+        return this._planningEngine.candidates;
+    }
+
+    getNextExperiment() {
+        return this._planningEngine.selectedExperiment;
+    }
+
+    getExperimentResult(experimentId) {
+        return this._planningEngine.trace.getDecisions().find(d => d.experimentId === experimentId) || null;
+    }
+
+    getVerificationProgress() {
+        return this._planningEngine.queries.getProgress();
+    }
+
+    getPlanningVerificationRisk(subject = 'overall') {
+        return this._planningEngine.getVerificationRisk(subject);
+    }
+
+    getVerificationPortfolio() {
+        return this._planningEngine.portfolio;
+    }
+
+    getPlanningSession() {
+        return this._planningEngine.activeSession;
+    }
+
+    getPlanningSnapshot() {
+        return this._planningEngine.getSnapshot();
+    }
+
+    getPlanTrace() {
+        return this._planningEngine.queries.getPlanTrace();
+    }
+
+    replanVerification(context = {}) {
+        return this._planningEngine.planNextAction(context);
+    }
+
+    stopVerificationPlan() {
+        if (this._planningEngine.activeSession) this._planningEngine.activeSession.pause();
+        return this._planningEngine.activeSession;
+    }
+
+    explainPlan() {
+        return this._planningEngine.explainPlan();
+    }
+
+    explainExperiment(experimentId) {
+        const d = this._planningEngine.trace.getDecisions().find(x => x.experimentId === experimentId);
+        return d ? `Experiment ${experimentId} (${d.kind}) on ${d.target} selected under ${d.policy} with utility ${d.utility}` : 'Experiment not found';
+    }
+
+    explainEvidenceGap(gapId) {
+        const gap = this._planningEngine.gaps.find(g => g.id === gapId);
+        return gap ? gap.rationale || gap.missingEvidence : 'Evidence gap not found';
+    }
+
+    getStrategyPerformance() {
+        return this._planningEngine.learner.getAllPerformances();
+    }
+
+    getKnowledgeBase() {
+        return this._planningEngine.knowledgeBase;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Stage 26: Distributed Verification Orchestration & Execution Engine
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    createVerificationExecution(options = {}) {
+        this._orchestrationEngine = new Orchestration.OrchestrationEngine(options);
+        return this._orchestrationEngine;
+    }
+
+    async startVerificationExecution(context = {}) {
+        return this._orchestrationEngine.startExecution(context);
+    }
+
+    pauseVerificationExecution() {
+        this._orchestrationEngine.pauseExecution();
+    }
+
+    resumeVerificationExecution() {
+        this._orchestrationEngine.resumeExecution();
+    }
+
+    async stepVerificationExecution(context = {}) {
+        return this._orchestrationEngine.stepExecution(context);
+    }
+
+    getVerificationTasks() {
+        return this._orchestrationEngine.getTasks();
+    }
+
+    getVerificationTask(taskId) {
+        return this._orchestrationEngine.getTask(taskId);
+    }
+
+    getReadyVerificationTasks() {
+        return this._orchestrationEngine.getReadyTasks();
+    }
+
+    getRunningVerificationTasks() {
+        return this._orchestrationEngine.getRunningTasks();
+    }
+
+    getCompletedVerificationTasks() {
+        return this._orchestrationEngine.getCompletedTasks();
+    }
+
+    getTaskDependencies() {
+        return this._orchestrationEngine.taskGraph.toJSON().dependencies;
+    }
+
+    getTaskCriticalPath() {
+        return Orchestration.CriticalPathAnalyzer.computeCriticalPath(this._orchestrationEngine.taskGraph);
+    }
+
+    getResourceBudget() {
+        return this._orchestrationEngine.getResourceBudget();
+    }
+
+    getResourceUsage() {
+        return this._orchestrationEngine.getResourceUsage();
+    }
+
+    getWorkerStatus() {
+        return this._orchestrationEngine.workers.map(w => w.toJSON());
+    }
+
+    cancelVerificationTask(taskId, reason = 'USER_REQUEST') {
+        return this._orchestrationEngine.cancelTask(taskId, reason);
+    }
+
+    cancelVerificationExecution() {
+        this._orchestrationEngine.cancelExecution();
+    }
+
+    retryVerificationTask(taskId) {
+        const task = this._orchestrationEngine.getTask(taskId);
+        if (task) {
+            return this._orchestrationEngine.scheduler.enqueue(task.withRetryCount((task.retryCount || 0) + 1));
+        }
+        return null;
+    }
+
+    getExecutionTrace() {
+        return this._orchestrationEngine.getExecutionTrace();
+    }
+
+    getExecutionCheckpoint() {
+        return this._orchestrationEngine.checkpointManager.getLatestCheckpoint();
+    }
+
+    checkpointVerification() {
+        return this._orchestrationEngine.checkpoint();
+    }
+
+    restoreVerification(checkpointId) {
+        return this._orchestrationEngine.restore(checkpointId);
+    }
+
+    getEvidenceMergeHistory() {
+        return this._orchestrationEngine.evidenceMerger.getMergeHistory();
+    }
+
+    getExecutionConflicts() {
+        const history = this._orchestrationEngine.evidenceMerger.getMergeHistory();
+        const conflicts = [];
+        for (const h of history) {
+            conflicts.push(...h.conflicts);
+        }
+        return conflicts;
+    }
+
+    getOrchestrationProgress() {
+        return {
+            totalTasks: this._orchestrationEngine.getTasks().length,
+            completedTasks: this._orchestrationEngine.getCompletedTasks().length,
+            runningTasks: this._orchestrationEngine.getRunningTasks().length,
+            queueLength: this._orchestrationEngine.scheduler.getQueueLength(),
+            isPaused: this._orchestrationEngine.isPaused
+        };
+    }
+
+    getOrchestrationHealth() {
+        const bottlenecks = Orchestration.BottleneckAnalyzer.analyzeBottlenecks(
+            this._orchestrationEngine.scheduler,
+            this._orchestrationEngine.resourceAllocator,
+            this._orchestrationEngine.concurrencyController
+        );
+        return {
+            isHealthy: bottlenecks.length === 0,
+            bottlenecks,
+            workerCount: this._orchestrationEngine.workers.length
+        };
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Stage 27: Universal Verification Federation & Multi-Engine Coordination API
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    createVerificationFederation(options = {}) {
+        this._federationEngine = new Federation.FederationEngine(options);
+        return this._federationEngine;
+    }
+
+    registerVerificationAgent(agent) {
+        return this._federationEngine.registerAgent(agent);
+    }
+
+    removeVerificationAgent(agentId) {
+        return this._federationEngine.removeAgent(agentId);
+    }
+
+    getVerificationAgents() {
+        return this._federationEngine.getAgents();
+    }
+
+    getAgentCapabilities(agentId) {
+        const agent = this._federationEngine.getAgent(agentId);
+        return agent ? agent.capabilities : null;
+    }
+
+    getAgentHealth(agentId) {
+        return this._federationEngine.getAgentHealth(agentId);
+    }
+
+    createFederatedPlan(options = {}) {
+        return this._federationEngine.createFederatedPlan(options);
+    }
+
+    delegateVerificationTask(taskIdOrRequest) {
+        return this._federationEngine.delegateTask(taskIdOrRequest);
+    }
+
+    getDelegationCandidates(taskId) {
+        const decision = this.getDelegationDecision(taskId);
+        return decision ? decision.candidates : [];
+    }
+
+    getDelegationDecision(taskId) {
+        return this._federationEngine.session.decisions.find(d => d.taskId === taskId) || null;
+    }
+
+    getFederatedTasks() {
+        return this._federationEngine.session.tasks;
+    }
+
+    getFederatedTask(taskId) {
+        return this._federationEngine.session.tasks.find(t => t.taskId === taskId) || null;
+    }
+
+    getSolverPortfolio() {
+        return this._federationEngine.solverPortfolio;
+    }
+
+    getSolverConsensus(constraint, results) {
+        return Federation.SolverConsensus.evaluate(constraint, results);
+    }
+
+    crossValidateEvidence(options = {}) {
+        return this._federationEngine.crossValidateEvidence(options);
+    }
+
+    getAgentDisagreements() {
+        return this._federationEngine.session.conflicts;
+    }
+
+    getFederationConflicts() {
+        return this._federationEngine.session.conflicts;
+    }
+
+    getFederationEvidenceGraph() {
+        return this._federationEngine.evidenceGraph;
+    }
+
+    getFederationHealth() {
+        return {
+            isHealthy: this._federationEngine.healthMonitor.getAllHealth().every(h => h.isHealthy),
+            agents: this._federationEngine.healthMonitor.getAllHealth().map(h => h.toJSON()),
+            quarantinedCount: this._federationEngine.manager._quarantineReasons.size
+        };
+    }
+
+    getFederationResourceUsage() {
+        return {
+            totalAgents: this._federationEngine.getAgents().length,
+            activeAgents: this._federationEngine.getAgents().filter(a => a.isAvailable()).length,
+            quarantinedAgents: this._federationEngine.getAgents().filter(a => a.isQuarantined()).length
+        };
+    }
+
+    quarantineAgent(agentId, reason) {
+        return this._federationEngine.quarantineAgent(agentId, reason);
+    }
+
+    restoreAgent(agentId) {
+        return this._federationEngine.restoreAgent(agentId);
+    }
+
+    getFederationSnapshot() {
+        return this._federationEngine.session.createSnapshot();
+    }
+
+    checkpointFederation(checkpointId) {
+        return this._federationEngine.checkpoint(checkpointId);
+    }
+
+    restoreFederation(checkpointId) {
+        return this._federationEngine.restoreCheckpoint(checkpointId);
+    }
+
+    getFederationTrace() {
+        return this._federationEngine.getTrace();
+    }
+
+    replayFederation(trace) {
+        return this._federationEngine.replayTrace(trace);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Stage 28: Universal Verification Knowledge Graph & Provenance API
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    createKnowledgeGraph(options = {}) {
+        this._knowledgeEngine = new Knowledge.KnowledgeEngine(options);
+        return this._knowledgeEngine;
+    }
+
+    addKnowledgeEntity(entity) {
+        return this._knowledgeEngine.addEntity(entity);
+    }
+
+    addKnowledgeEdge(edge) {
+        return this._knowledgeEngine.addEdge(edge);
+    }
+
+    getKnowledgeEntity(entityId) {
+        return this._knowledgeEngine.getEntity(entityId);
+    }
+
+    getKnowledgeEntities() {
+        return this._knowledgeEngine.getEntities();
+    }
+
+    getKnowledgeNeighbors(entityId, options = {}) {
+        return this._knowledgeEngine.getNeighbors(entityId, options);
+    }
+
+    getKnowledgePath(from, to, options = {}) {
+        return this._knowledgeEngine.findPath(from, to, options);
+    }
+
+    getKnowledgeAncestors(entityId, options = {}) {
+        return this._knowledgeEngine.graph.getAncestors(entityId, options);
+    }
+
+    getKnowledgeDescendants(entityId, options = {}) {
+        return this._knowledgeEngine.graph.getDescendants(entityId, options);
+    }
+
+    getProvenanceChain(entityId) {
+        return this._knowledgeEngine.resolveProvenance(entityId);
+    }
+
+    getArtifactOrigin(entityId) {
+        const chain = this.getProvenanceChain(entityId);
+        return chain ? chain.getOrigin() : null;
+    }
+
+    getArtifactDependents(entityId) {
+        const chain = this.getProvenanceChain(entityId);
+        return chain ? chain.getDescendants() : [];
+    }
+
+    getCausalGraph() {
+        return this._knowledgeEngine.causalGraph;
+    }
+
+    addCausalLink(link) {
+        return this._knowledgeEngine.addCausalLink(link);
+    }
+
+    getCausalChain(effectId) {
+        return this._knowledgeEngine.getCausalChain(effectId);
+    }
+
+    getRootCauseCandidates(effectId) {
+        const res = this._knowledgeEngine.analyzeRootCause(effectId);
+        return res ? res.candidates : [];
+    }
+
+    getRootCauseExplanation(effectId) {
+        const res = this._knowledgeEngine.analyzeRootCause(effectId);
+        return res ? res.explanation : 'No root cause identified';
+    }
+
+    runCounterfactual(options = {}) {
+        return this._knowledgeEngine.simulateCounterfactual(options);
+    }
+
+    getCounterfactualResult(hypothesisId) {
+        return this._knowledgeEngine.counterfactualEngine.getHypothesis(hypothesisId);
+    }
+
+    getEvidenceDependencies(evidenceId) {
+        return this._knowledgeEngine.evidenceDependencyGraph.getSupporters(evidenceId);
+    }
+
+    getEvidenceSupportChain(evidenceId) {
+        return this._knowledgeEngine.evidenceDependencyGraph.getDependencyClosure(evidenceId);
+    }
+
+    getEvidenceInvalidationImpact(evidenceId) {
+        return this._knowledgeEngine.evidenceDependencyGraph.getInvalidationImpact(evidenceId);
+    }
+
+    getSemanticDependencies(entityId) {
+        return this._knowledgeEngine.semanticDependencyAnalyzer.findDependencies(entityId);
+    }
+
+    getSpecificationTraceability(specId) {
+        return this._knowledgeEngine.traceabilityAnalyzer.getTraceability(specId);
+    }
+
+    getKnowledgeConflicts() {
+        const conflicts = [];
+        for (const edge of this._knowledgeEngine.graph.getEdges()) {
+            if (edge.relation === 'CONTRADICTS') {
+                conflicts.push(new Knowledge.KnowledgeConflict({
+                    entityAId: edge.source,
+                    entityBId: edge.target,
+                    claim: edge.metadata?.claim || 'PROPERTY_CLAIM'
+                }));
+            }
+        }
+        return conflicts;
+    }
+
+    getKnowledgeConflictExplanation(conflict) {
+        return Knowledge.ConflictExplanation.explain(conflict);
+    }
+
+    getBehaviorKnowledge(behaviorId) {
+        const entity = this.getKnowledgeEntity(behaviorId);
+        return entity ? new Knowledge.BehaviorKnowledge({ behaviorId, entityId: entity.id }) : null;
+    }
+
+    getBehaviorRelations(behA, behB) {
+        return Knowledge.BehaviorRelationAnalyzer.compareBehaviors(behA, behB);
+    }
+
+    getKnowledgeRegressionImpact(options = {}) {
+        return Knowledge.RegressionKnowledgeAnalyzer.analyzeRegression(options);
+    }
+
+    explainVerification(entityId, style = 'SUMMARY') {
+        return this._knowledgeEngine.explain(entityId, style);
+    }
+
+    explainFinding(findingId) {
+        return this._knowledgeEngine.explain(findingId, 'CAUSAL');
+    }
+
+    explainProof(proofId) {
+        return this._knowledgeEngine.explain(proofId, 'EVIDENCE');
+    }
+
+    explainRepair(repairId) {
+        return this._knowledgeEngine.explain(repairId, 'DETAILED');
+    }
+
+    queryKnowledgeGraph(query) {
+        return this._knowledgeEngine.query(query);
+    }
+
+    findKnowledgeGaps() {
+        return this._knowledgeEngine.findGaps();
+    }
+
+    getKnowledgeSnapshot() {
+        return this._knowledgeEngine.getSnapshot();
+    }
+
+    checkpointKnowledge(checkpointId) {
+        return this._knowledgeEngine.checkpoint(checkpointId);
+    }
+
+    restoreKnowledge(checkpointId) {
+        return this._knowledgeEngine.restoreCheckpoint(checkpointId);
+    }
+
+    diffKnowledgeSnapshots(snapA, snapB) {
+        return Knowledge.KnowledgeDiff.diff(snapA, snapB);
+    }
+
+    replayKnowledge(trace) {
+        return this._knowledgeEngine.replayTrace(trace);
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
