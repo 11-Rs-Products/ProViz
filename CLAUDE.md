@@ -1,5 +1,7 @@
 # CLAUDE.md — ProViz: Autonomous Verification OS & 3D Execution IDE
 
+> **Session start:** read `AI_CONTEXT.md` (current state, user preferences, gotchas, verification recipes, change log) and keep it updated at the end of each session. Human-facing reference: `PROJECT_OVERVIEW.md`.
+
 > **Primary Purpose:** This guide serves as the single source of truth for Claude Code (and any AI pair programmer) to understand, develop, test, fix, and elevate **ProViz** into a world-class, production-grade 3D Code Visualizer and Autonomous Verification Operating System.
 
 ---
@@ -39,7 +41,7 @@ npm run dev
 # Starts Vite local server (usually http://localhost:5173)
 ```
 
-### Run Full Test Suite (38 files, 958 assertions)
+### Run Full Test Suite (39 files, 965 assertions)
 ```bash
 node test/run_all_tests.mjs
 ```
@@ -129,6 +131,14 @@ ProViz/
 * **Roles:** `guest < user (General access) < admin < superadmin` (admin + superadmin = Developer access), resolved by `resolveRole()` in `src/auth/roles.js` from `VITE_ADMIN_EMAILS` / `VITE_SUPERADMIN_EMAILS` (see `.env.example`) and Firebase custom claims (`{ role }`, `admin`, `superadmin` — may raise, never lower). Studios and actions are gated by `STUDIOS` / `CAPABILITIES`; mark DOM with `data-cap="governance.safemode"` (hidden) or add `data-cap-mode="disable"` (locked). This is UI gating only — real protection needs server rules.
 * **Role is always visible:** the header user chip shows the role pill; the user menu explains what the role can do.
 * **Dev-only role preview:** `/app/?preview=user|admin|superadmin|guest` (sticky per tab, `?preview=off` to clear). Tree-shaken from production builds. Never read `import.meta.env` as a whole object — it inlines every `VITE_*` value into the bundle.
+
+## 3b. Universal Visualisation (any Python program)
+
+* **Run executes whatever is in the editor** — examples (`src/examples/catalog.js`, grouped: Algorithms / Data structures / Data & tables) are only starting code. The user's own scratchpad is saved (`proviz.scratchpad`) and restored when they return to it.
+* **Tracer scope:** `PythonExecutor` traces only `<user_code>` frames; library/stdlib frames are skipped while user callbacks they invoke (sort keys, lambdas) are still traced. Imported Pyodide packages (numpy, pandas, …) are auto-loaded and pre-imported untraced before the run (`_prepareImports`).
+* **Value coverage:** scalars (incl. big ints as text, inf/nan, complex, Decimal, Fraction, dates, Enum, bytes, numpy scalars) → primitives; list/tuple/set/frozenset/dict and their subclasses (deque, Counter, defaultdict, OrderedDict, range, bytearray) keep their real class names; namedtuple and `__slots__` objects show field names; iterators/generators/functions show a readable value — nothing is "opaque".
+* **Tables:** pandas DataFrame and 2-D numpy arrays arrive as `type: 'table'` heap objects; `WorldModel.tableOf` also turns lists of equal rows (matrices) and lists of same-key dicts (records) into one grid. `SpatialWorld._upsertGrid` draws rows × columns with headers, cells coloured by value type.
+* Benchmark idea for regressions: run a battery of diverse programs through the app and assert no errors, no library frames in the step list, and no opaque values.
 
 ## 4. Design System & UI/UX Standards
 

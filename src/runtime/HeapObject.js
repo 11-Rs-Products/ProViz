@@ -7,6 +7,7 @@
  *  - 'set': Unique elements
  *  - 'tuple': Immutable sequence of elements
  *  - 'instance': Class instance with named fields/attributes
+ *  - 'table': Rows × columns grid (pandas DataFrame, 2-D numpy array)
  */
 
 export class HeapObject {
@@ -26,6 +27,11 @@ export class HeapObject {
         elements = [],
         entries = [],
         fields = {},
+        columns = null,
+        rowLabels = null,
+        rows = null,
+        totalRows = null,
+        totalCols = null,
     }) {
         this.id = id;
         this.type = type;
@@ -33,6 +39,13 @@ export class HeapObject {
         this.elements = Array.isArray(elements) ? [...elements] : [];
         this.entries = Array.isArray(entries) ? [...entries] : [];
         this.fields = { ...fields };
+        if (type === 'table') {
+            this.columns = Array.isArray(columns) ? [...columns] : [];
+            this.rowLabels = Array.isArray(rowLabels) ? [...rowLabels] : [];
+            this.rows = Array.isArray(rows) ? rows.map(r => (Array.isArray(r) ? [...r] : [])) : [];
+            this.totalRows = totalRows ?? this.rows.length;
+            this.totalCols = totalCols ?? this.columns.length;
+        }
     }
 
     /**
@@ -55,6 +68,8 @@ export class HeapObject {
                 checkVal(entry.key);
                 checkVal(entry.value);
             });
+        } else if (this.type === 'table') {
+            this.rows.forEach(row => row.forEach(checkVal));
         } else {
             Object.values(this.fields).forEach(checkVal);
         }
@@ -70,6 +85,8 @@ export class HeapObject {
         if (JSON.stringify(this.elements) !== JSON.stringify(other.elements)) return false;
         if (JSON.stringify(this.entries) !== JSON.stringify(other.entries)) return false;
         if (JSON.stringify(this.fields) !== JSON.stringify(other.fields)) return false;
+        if (this.type === 'table' && JSON.stringify([this.columns, this.rowLabels, this.rows, this.totalRows, this.totalCols])
+            !== JSON.stringify([other.columns, other.rowLabels, other.rows, other.totalRows, other.totalCols])) return false;
         return true;
     }
 
@@ -81,6 +98,11 @@ export class HeapObject {
             elements: this.elements.map(e => (e && typeof e === 'object' ? { ...e } : e)),
             entries: this.entries.map(e => ({ key: { ...e.key }, value: { ...e.value } })),
             fields: { ...this.fields },
+            columns: this.columns,
+            rowLabels: this.rowLabels,
+            rows: this.rows ? this.rows.map(r => r.map(c => (c && typeof c === 'object' ? { ...c } : c))) : null,
+            totalRows: this.totalRows,
+            totalCols: this.totalCols,
         });
     }
 
@@ -95,6 +117,8 @@ export class HeapObject {
             out.elements = this.elements;
         } else if (this.type === 'dict') {
             out.entries = this.entries;
+        } else if (this.type === 'table') {
+            Object.assign(out, { columns: this.columns, rowLabels: this.rowLabels, rows: this.rows, totalRows: this.totalRows, totalCols: this.totalCols });
         } else {
             out.fields = this.fields;
         }

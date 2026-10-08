@@ -13,6 +13,8 @@ export const WORLD_LIMITS = Object.freeze({
     MAX_CELLS: 12,
     MAX_OBJECTS: 40,
     MAX_DISPLAY: 18,
+    MAX_TABLE_ROWS: 10,
+    MAX_TABLE_COLS: 8,
 });
 
 function truncate(text, max = WORLD_LIMITS.MAX_DISPLAY) {
@@ -54,6 +56,69 @@ function cellsOf(obj) {
         });
     }
     return cells;
+}
+
+function isPrimitiveValue(v) {
+    return !isRef(v);
+}
+
+/**
+ * Tabular view of an object, or null. Tables come from three places:
+ *  - the tracer's 'table' objects (pandas DataFrame, 2-D numpy array)
+ *  - a list/tuple of equal-ish rows of primitives (a matrix / grid)
+ *  - a list/tuple of dicts that share the same primitive-valued keys (records)
+ * Returns { columns, rowLabels, rows: [[value]], totalRows, totalCols, absorbed: [objectId] }.
+ */
+export function tableOf(obj, heap) {
+    const L = WORLD_LIMITS;
+    if (!obj) return null;
+    if (obj.type === 'table') {
+        return {
+            columns: obj.columns || [],
+            rowLabels: obj.rowLabels || [],
+            rows: obj.rows || [],
+            totalRows: obj.totalRows ?? (obj.rows || []).length,
+            totalCols: obj.totalCols ?? (obj.columns || []).length,
+            absorbed: [],
+        };
+    }
+    if (obj.type !== 'list' && obj.type !== 'tuple') return null;
+    const els = obj.elements || [];
+    if (els.length < 2 || !els.every(isRef)) return null;
+    const children = els.map(e => heapLookup(heap, e.objectId));
+    if (children.some(c => !c)) return null;
+
+    // Matrix: every row is a list/tuple of primitives, 1..MAX_TABLE_COLS wide.
+    if (children.every(c => (c.type === 'list' || c.type === 'tuple') && (c.elements || []).length > 0
+        && (c.elements || []).length <= L.MAX_TABLE_COLS && c.elements.every(isPrimitiveValue))) {
+        const width = Math.max(...children.map(c => c.elements.length));
+        return {
+            columns: Array.from({ length: width }, (_, i) => String(i)),
+            rowLabels: children.map((_, i) => String(i)),
+            rows: children.map(c => Array.from({ length: width }, (_, i) => c.elements[i] ?? null)),
+            totalRows: obj.elements.length,
+            totalCols: width,
+            absorbed: els.map(e => e.objectId),
+        };
+    }
+
+    // Records: every row is a dict of primitives with the same keys.
+    if (children.every(c => c.type === 'dict' && (c.entries || []).length > 0 && c.entries.length <= L.MAX_TABLE_COLS
+        && c.entries.every(e => isPrimitiveValue(e.key) && isPrimitiveValue(e.value)))) {
+        const keyOf = e => stringifyValue(e.key, {});
+        const keys = children[0].entries.map(keyOf);
+        const sameKeys = children.every(c => c.entries.length === keys.length && c.entries.every((e, i) => keyOf(e) === keys[i]));
+        if (!sameKeys) return null;
+        return {
+            columns: keys.map(k => k.replace(/^"(.*)"$/, '$1')),
+            rowLabels: children.map((_, i) => String(i)),
+            rows: children.map(c => c.entries.map(e => e.value)),
+            totalRows: obj.elements.length,
+            totalCols: keys.length,
+            absorbed: els.map(e => e.objectId),
+        };
+    }
+    return null;
 }
 
 /**
@@ -118,6 +183,40 @@ export function buildWorldModel(state, frame = null) {
         seen.add(objectId);
         const obj = heapLookup(heap, objectId);
         if (!obj) continue;
+
+        const table = tableOf(obj, heap);
+        if (table) {
+            // Rows absorbed into the table are not drawn again as separate objects.
+            table.absorbed.forEach(id => seen.add(id));
+            const rows = table.rows.slice(0, WORLD_LIMITS.MAX_TABLE_ROWS);
+            const ncols = Math.min(table.columns.length, WORLD_LIMITS.MAX_TABLE_COLS);
+            const gridRows = rows.map((row, r) => ({
+                label: truncate(table.rowLabels[r] ?? String(r), 6),
+                cells: row.slice(0, ncols).map((v, c) => ({
+                    id: `cell:${objectId}:${r}:${c}`,
+                    display: v == null ? '' : truncate(primitiveDisplay(v, heap), 9),
+                    objectId: isRef(v) ? v.objectId : null,
+                    type: v?.type || null,
+                })),
+            }));
+            world.objects.push({
+                id: `obj:${objectId}`,
+                objectId,
+                type: obj.type,
+                className: obj.className || obj.type,
+                cells: gridRows.flatMap(r => r.cells),
+                overflow: 0,
+                grid: {
+                    columns: table.columns.slice(0, ncols).map(c => truncate(c, 9)),
+                    rows: gridRows,
+                    totalRows: table.totalRows,
+                    totalCols: table.totalCols,
+                    hiddenRows: Math.max(0, table.totalRows - gridRows.length),
+                    hiddenCols: Math.max(0, table.totalCols - ncols),
+                },
+            });
+            continue;
+        }
 
         const all = cellsOf(obj);
         const cells = all.slice(0, WORLD_LIMITS.MAX_CELLS).map((c, i) => {

@@ -122,10 +122,16 @@ export function stringifyValue(value, heap = {}, visited = new Set(), depth = 0)
             const elements = obj.elements || [];
             const inner = elements.map(el => stringifyValue(el, heap, visited, depth + 1)).join(', ');
             result = obj.type === 'tuple' ? `(${inner}${elements.length === 1 ? ',' : ''})` : `[${inner}]`;
+            if (obj.className && obj.className !== 'list' && obj.className !== 'tuple') result = `${obj.className}(${result})`;
         } else if (obj.type === 'dict') {
             const entries = obj.entries || [];
             const inner = entries.map(e => `${stringifyValue(e.key, heap, visited, depth + 1)}: ${stringifyValue(e.value, heap, visited, depth + 1)}`).join(', ');
             result = `{${inner}}`;
+            if (obj.className && obj.className !== 'dict') result = `${obj.className}(${result})`;
+        } else if (obj.type === 'table') {
+            const rows = obj.totalRows ?? (obj.rows || []).length;
+            const cols = obj.totalCols ?? (obj.columns || []).length;
+            result = `${obj.className || 'table'} (${rows} rows × ${cols} columns)`;
         } else if (obj.type === 'set') {
             const elements = obj.elements || [];
             result = elements.length === 0 ? 'set()' : `{${elements.map(el => stringifyValue(el, heap, visited, depth + 1)).join(', ')}}`;

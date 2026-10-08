@@ -23,7 +23,7 @@ import { buildWorldModel }   from './src/rendering/WorldModel.js';
 import {
     stepIntoIndex, stepOverIndex, stepOutIndex, continueIndex, timelineMarkers, changeOriginLine,
 } from './src/debugger/StepNavigator.js';
-import { questions }         from './src/questions/registry.js';
+import { exampleGroups, findExample, SCRATCHPAD_ID } from './src/examples/catalog.js';
 import { transitionTheme }   from './src/site/themeTransition.js';
 import {
     watchSession, signInWithGoogle, signOutEverywhere, getRoleConfig, describeAuthError, authConfigured,
@@ -336,6 +336,11 @@ const velvetHighlight = HighlightStyle.define([
 ]);
 
 let editor;
+let scratchSaveTimer = null;
+function scheduleScratchSave() {
+    clearTimeout(scratchSaveTimer);
+    scratchSaveTimer = setTimeout(() => saveScratchpad(), 400);
+}
 
 function highlightLine(lineNo) {
     if (!editor) return;
@@ -361,6 +366,7 @@ if (editorContainer) {
                 varHighlightField,
                 EditorView.updateListener.of(u => {
                     if (u.docChanged && traceLoaded) markTraceStale();
+                    if (u.docChanged) scheduleScratchSave();
                 }),
                 syntaxHighlighting(velvetHighlight),
                 EditorView.theme({
@@ -613,28 +619,54 @@ if (btnClearJournal) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Question Presets
+// Examples menu — examples are only starting code; any program is visualised the same way.
+// The user's own scratchpad is kept (and restored) when they browse examples.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const questionSelect = $('question-select');
-const allQuestions = [SCRATCHPAD_OPTION, ...questions];
+const SCRATCH_KEY = 'proviz.scratchpad';
+let currentExample = SCRATCHPAD_ID;
+
+function saveScratchpad() {
+    if (currentExample === SCRATCHPAD_ID && editor) writePref(SCRATCH_KEY, editor.state.doc.toString());
+}
 
 if (questionSelect) {
-    allQuestions.forEach(q => {
-        const opt = document.createElement('option');
-        opt.value = q.id;
-        opt.textContent = q.title;
-        questionSelect.appendChild(opt);
-    });
+    const mine = document.createElement('optgroup');
+    mine.label = 'Your code';
+    const scratch = document.createElement('option');
+    scratch.value = SCRATCHPAD_ID;
+    scratch.textContent = 'Scratchpad';
+    mine.appendChild(scratch);
+    questionSelect.appendChild(mine);
+    for (const group of exampleGroups()) {
+        const og = document.createElement('optgroup');
+        og.label = `Examples · ${group.label}`;
+        for (const ex of group.items) {
+            const opt = document.createElement('option');
+            opt.value = ex.id;
+            opt.textContent = ex.title;
+            og.appendChild(opt);
+        }
+        questionSelect.appendChild(og);
+    }
+    questionSelect.title = 'Load an example, or return to your scratchpad';
+
+    // Restore the user's last scratchpad (not the default demo) after a reload.
+    const savedScratch = readPref(SCRATCH_KEY, null);
+    if (savedScratch != null && editor && savedScratch !== editor.state.doc.toString()) {
+        editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: savedScratch } });
+    }
 
     questionSelect.addEventListener('change', (e) => {
-        const selected = allQuestions.find(q => q.id === e.target.value) || SCRATCHPAD_OPTION;
-        if (editor) {
-            editor.dispatch({
-                changes: { from: 0, to: editor.state.doc.length, insert: selected.starter_code },
-            });
-        }
-        resetTrace('Preset loaded. Press F5 to run.');
+        saveScratchpad();
+        const id = e.target.value;
+        const code = id === SCRATCHPAD_ID
+            ? readPref(SCRATCH_KEY, SCRATCHPAD_OPTION.starter_code)
+            : (findExample(id)?.starter_code ?? SCRATCHPAD_OPTION.starter_code);
+        currentExample = id;
+        if (editor) editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: code } });
+        resetTrace(id === SCRATCHPAD_ID ? 'Back to your scratchpad. Press F5 to run.' : 'Example loaded. Edit it freely, then press F5 to run.');
     });
 }
 
@@ -707,6 +739,15 @@ executor.onStatus(({ status, message }) => {
     if (runtimeChip) runtimeChip.title = message || runtimeChipText?.textContent || '';
     fitEditorToolbar(); // status labels differ in length ("Loading Python…" vs "Python ready")
     if (runtimeOverlayMsg && message) runtimeOverlayMsg.textContent = message;
+    // Package downloads (numpy, pandas …) happen mid-run: show the same loading card.
+    if (isRunning && runtimeOverlay) {
+        if (status === 'loading') {
+            $('runtime-overlay-title').textContent = executor.isReady ? 'Loading packages' : 'Preparing Python';
+            runtimeOverlay.hidden = false;
+        } else if (status === 'ready' || status === 'error') {
+            runtimeOverlay.hidden = true;
+        }
+    }
 });
 
 /** Start downloading Pyodide in the background so the first Run is instant. */
@@ -1600,7 +1641,7 @@ $('up-signin')?.addEventListener('click', async () => {
 document.querySelectorAll('[data-year]').forEach(el => { el.textContent = String(new Date().getFullYear()); });
 
 // Dev-only diagnostics handle (e.g. __proviz.world.stats() for WebGL leak checks).
-if (import.meta.env?.DEV) window.__proviz = { world, playback, executor, editor };
+if (import.meta.env?.DEV) window.__proviz = { world, playback, executor, editor, get lastWorld() { return lastWorld; }, get lastTrace() { return lastTrace; } };
 
 if (import.meta.hot) {
     import.meta.hot.dispose(() => {

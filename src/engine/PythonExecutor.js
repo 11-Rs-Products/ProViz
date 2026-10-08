@@ -97,6 +97,8 @@ import traceback as _traceback_mod
 MAX_DEPTH = ${MAX_DEPTH}
 MAX_ITEMS = ${MAX_ITEMS}
 MAX_STR_LEN = ${MAX_STR_LEN}
+MAX_TABLE_ROWS = 12
+MAX_TABLE_COLS = 10
 
 # Sentinel for "no previous value"
 _MISSING = object()
@@ -112,6 +114,7 @@ class _ProVizTracer:
         'js', 'sys', '__builtins__', '__name__', '__doc__',
         '_ProVizTracer', '_tracer_instance', '_user_code',
         'json', '_traceback_mod', '_time_mod', '_MISSING', 'MAX_DEPTH', 'MAX_ITEMS', 'MAX_STR_LEN',
+        'MAX_TABLE_ROWS', 'MAX_TABLE_COLS',
         'ExecutionLimitExceeded',
     ])
 
@@ -125,6 +128,15 @@ class _ProVizTracer:
         self._prev_heap_states = {} # "obj_N" -> serialized representation for diffing
         self._started = _time_mod.monotonic()
 
+    def _cell(self, x):
+        """Unwrap numpy / pandas scalars so table cells serialize as plain primitives."""
+        if hasattr(x, 'item') and getattr(x, 'ndim', 1) == 0 and (type(x).__module__ or '').startswith('numpy'):
+            try:
+                return x.item()
+            except Exception:
+                return x
+        return x
+
     def _get_obj_id(self, obj):
         py_id = id(obj)
         if py_id not in self._id_to_proviz:
@@ -132,25 +144,101 @@ class _ProVizTracer:
             self._obj_counter += 1
         return self._id_to_proviz[py_id]
 
+    # ---- Value serialization -------------------------------------------------------------
+    # Every Python value maps to one of: primitive (shown inline), reference -> heap object
+    # (list / tuple / set / dict / instance / table), or a readable primitive fallback.
+    # Nothing is ever dropped as an unexplained "opaque" type.
+
+    def _short_repr(self, v, limit=60):
+        try:
+            r = repr(v)
+        except Exception:
+            r = '<' + type(v).__name__ + '>'
+        return r if len(r) <= limit else r[:limit - 1] + '…'
+
+    def _prim(self, type_name, value):
+        return {'kind': 'primitive', 'type': type_name, 'value': value}
+
+    def _scalar(self, v):
+        """Primitive form of a scalar, or None when v is not a scalar."""
+        if v is None:
+            return self._prim('NoneType', None)
+        if isinstance(v, bool):
+            return self._prim('bool', v)
+        if isinstance(v, int):
+            # JSON numbers above 2**53 lose precision in JavaScript: send big ints as text.
+            return self._prim('int', v if -9007199254740991 <= v <= 9007199254740991 else str(v))
+        if isinstance(v, float):
+            if v != v or v in (float('inf'), float('-inf')):
+                return self._prim('float', repr(v))   # nan / inf are not valid JSON
+            return self._prim('float', v)
+        if isinstance(v, str):
+            return self._prim('str', v if len(v) <= MAX_STR_LEN else v[:MAX_STR_LEN - 3] + '...')
+        mod = type(v).__module__ or ''
+        name = type(v).__name__
+        # numpy scalars (np.int64, np.float32, np.bool_ …)
+        if mod == 'numpy' and hasattr(v, 'item') and getattr(v, 'ndim', 1) == 0:
+            return self._scalar(v.item())
+        if isinstance(v, complex):
+            return self._prim('complex', str(v))
+        if name in ('Decimal', 'Fraction') and mod in ('decimal', 'fractions', '_pydecimal'):
+            return self._prim(name, str(v))
+        if mod == 'datetime' and name in ('date', 'datetime', 'time', 'timedelta', 'timezone'):
+            return self._prim(name, str(v))
+        try:
+            import enum as _enum
+            if isinstance(v, _enum.Enum):
+                return self._prim(name, name + '.' + str(v.name))
+        except Exception:
+            pass
+        if isinstance(v, bytes):
+            return self._prim('bytes', self._short_repr(v))
+        if mod.startswith('pandas') and name in ('Timestamp', 'Timedelta'):
+            return self._prim(name, str(v))
+        return None
+
+    def _readable(self, v):
+        """Readable stand-in for values that have no inspectable structure (iterators, functions…)."""
+        name = type(v).__name__
+        if name == 'generator':
+            return self._prim('generator', '<generator ' + getattr(v, '__name__', '') + '>')
+        if name in ('function', 'builtin_function_or_method', 'method'):
+            return self._prim('function', '<function ' + getattr(v, '__name__', '?') + '>')
+        if isinstance(v, type):
+            return self._prim('class', '<class ' + v.__name__ + '>')
+        return self._prim(name, self._short_repr(v))
+
+    def _seq(self, obj_id, kind, class_name, items, visited, depth, labels=None):
+        elements = [self._serialize_value(x, visited, depth + 1) for x in items]
+        node = {'id': obj_id, 'type': kind, 'className': class_name, 'elements': elements}
+        if labels is not None:
+            node['labels'] = labels
+        self._heap[obj_id] = node
+
+    def _table(self, obj_id, class_name, columns, rows, row_labels, total_rows, visited, depth):
+        self._heap[obj_id] = {
+            'id': obj_id,
+            'type': 'table',
+            'className': class_name,
+            'columns': [str(c) for c in columns],
+            'rowLabels': [str(r) for r in row_labels],
+            'rows': [[self._serialize_value(c, visited, depth + 1) for c in row] for row in rows],
+            'totalRows': total_rows,
+            'totalCols': len(columns),
+        }
+
     def _serialize_value(self, v, visited=None, depth=0):
         if visited is None:
             visited = set()
 
-        if v is None:
-            return {'kind': 'primitive', 'type': 'NoneType', 'value': None}
-        if isinstance(v, bool):
-            return {'kind': 'primitive', 'type': 'bool', 'value': v}
-        if isinstance(v, int):
-            return {'kind': 'primitive', 'type': 'int', 'value': v}
-        if isinstance(v, float):
-            return {'kind': 'primitive', 'type': 'float', 'value': v}
-        if isinstance(v, str):
-            val = v if len(v) <= MAX_STR_LEN else v[:MAX_STR_LEN - 3] + '...'
-            return {'kind': 'primitive', 'type': 'str', 'value': val}
+        prim = self._scalar(v)
+        if prim is not None:
+            return prim
 
         # Check for heap-allocated object
         obj_id = self._get_obj_id(v)
         type_name = type(v).__name__
+        mod = type(v).__module__ or ''
         ref_val = {'kind': 'reference', 'type': type_name, 'objectId': obj_id}
 
         # Cycle detection & depth protection
@@ -160,56 +248,66 @@ class _ProVizTracer:
         visited.add(id(v))
 
         try:
-            if isinstance(v, (list, tuple)):
-                t_name = 'tuple' if isinstance(v, tuple) else 'list'
-                elements = []
-                for item in v[:MAX_ITEMS]:
-                    elements.append(self._serialize_value(item, visited, depth + 1))
+            # --- data-science containers ---------------------------------------------------
+            if mod.startswith('pandas') and type_name == 'DataFrame':
+                cols = list(v.columns)[:MAX_TABLE_COLS]
+                head = v.iloc[:MAX_TABLE_ROWS, :MAX_TABLE_COLS]
+                rows = [[self._cell(x) for x in r] for r in head.itertuples(index=False, name=None)]
+                self._table(obj_id, 'DataFrame', cols, rows, list(head.index), len(v), visited, depth)
+                self._heap[obj_id]['totalCols'] = len(v.columns)
+            elif mod.startswith('pandas') and type_name == 'Series':
+                items = list(v.items())[:MAX_ITEMS]
                 self._heap[obj_id] = {
-                    'id': obj_id,
-                    'type': t_name,
-                    'className': t_name,
-                    'elements': elements,
+                    'id': obj_id, 'type': 'dict', 'className': 'Series' + (' ' + str(v.name) if v.name is not None else ''),
+                    'entries': [{'key': self._serialize_value(k, visited, depth + 1), 'value': self._serialize_value(self._cell(x), visited, depth + 1)} for k, x in items],
                 }
-            elif isinstance(v, set):
-                elements = []
-                for item in list(v)[:MAX_ITEMS]:
-                    elements.append(self._serialize_value(item, visited, depth + 1))
+            elif mod == 'numpy' and type_name == 'ndarray':
+                if v.ndim == 2:
+                    rows = v[:MAX_TABLE_ROWS, :MAX_TABLE_COLS].tolist()
+                    self._table(obj_id, 'ndarray ' + str(v.dtype), list(range(min(v.shape[1], MAX_TABLE_COLS))), rows,
+                                list(range(len(rows))), v.shape[0], visited, depth)
+                    self._heap[obj_id]['totalCols'] = int(v.shape[1])
+                else:
+                    flat = v.reshape(-1)[:MAX_ITEMS].tolist() if v.ndim != 1 else v[:MAX_ITEMS].tolist()
+                    self._seq(obj_id, 'list', 'ndarray ' + str(v.dtype), flat, visited, depth)
+            # --- built-in containers (and their subclasses: Counter, OrderedDict, deque …) ----
+            elif isinstance(v, tuple) and hasattr(v, '_fields'):
+                # namedtuple: show field names instead of indices
                 self._heap[obj_id] = {
-                    'id': obj_id,
-                    'type': 'set',
-                    'className': 'set',
-                    'elements': elements,
+                    'id': obj_id, 'type': 'instance', 'className': type_name,
+                    'fields': {f: self._serialize_value(getattr(v, f), visited, depth + 1) for f in v._fields},
                 }
+            elif isinstance(v, (list, tuple)):
+                kind = 'tuple' if isinstance(v, tuple) else 'list'
+                self._seq(obj_id, kind, type_name, v[:MAX_ITEMS], visited, depth)
+            elif isinstance(v, (set, frozenset)):
+                self._seq(obj_id, 'set', type_name, list(v)[:MAX_ITEMS], visited, depth)
             elif isinstance(v, dict):
                 entries = []
                 for k, val in list(v.items())[:MAX_ITEMS]:
-                    k_ser = self._serialize_value(k, visited, depth + 1)
-                    v_ser = self._serialize_value(val, visited, depth + 1)
-                    entries.append({'key': k_ser, 'value': v_ser})
-                self._heap[obj_id] = {
-                    'id': obj_id,
-                    'type': 'dict',
-                    'className': 'dict',
-                    'entries': entries,
-                }
-            elif hasattr(v, '__dict__') and not callable(v):
-                # Class instance
+                    entries.append({'key': self._serialize_value(k, visited, depth + 1),
+                                    'value': self._serialize_value(val, visited, depth + 1)})
+                self._heap[obj_id] = {'id': obj_id, 'type': 'dict', 'className': type_name, 'entries': entries}
+            elif type_name == 'deque' or isinstance(v, (bytearray, range)):
+                self._seq(obj_id, 'list', type_name, list(v)[:MAX_ITEMS], visited, depth)
+            elif type_name == 'array' and mod == 'array':
+                self._seq(obj_id, 'list', 'array', list(v)[:MAX_ITEMS], visited, depth)
+            # --- user-defined objects ----------------------------------------------------------
+            elif (hasattr(v, '__dict__') or hasattr(type(v), '__slots__')) and not callable(v) and not isinstance(v, type):
                 fields = {}
-                for k, val in v.__dict__.items():
+                for k, val in getattr(v, '__dict__', {}).items():
                     if not k.startswith('__'):
                         fields[k] = self._serialize_value(val, visited, depth + 1)
-                self._heap[obj_id] = {
-                    'id': obj_id,
-                    'type': 'instance',
-                    'className': type_name,
-                    'fields': fields,
-                }
+                for cls in type(v).__mro__:
+                    for k in getattr(cls, '__slots__', ()) if not isinstance(getattr(cls, '__slots__', ()), str) else (cls.__slots__,):
+                        if not k.startswith('__') and k not in fields and hasattr(v, k):
+                            fields[k] = self._serialize_value(getattr(v, k), visited, depth + 1)
+                self._heap[obj_id] = {'id': obj_id, 'type': 'instance', 'className': type_name, 'fields': fields}
             else:
-                # Opaque fallback for non-inspectable types
-                return {'kind': 'opaque', 'type': type_name, 'reason': 'opaque_type'}
-        except Exception as e:
-            return {'kind': 'opaque', 'type': type_name, 'reason': str(e)}
+                # Iterators, generators, functions, modules … — show a readable value, not "opaque".
+                return self._readable(v)
+        except Exception:
+            return self._readable(v)
         finally:
             visited.remove(id(v))
 
@@ -218,11 +316,11 @@ class _ProVizTracer:
     def trace(self, frame, event, arg):
         fn_name = frame.f_code.co_name
 
-        # Skip internal frames
-        if fn_name in ('_run_user_code', '_ProVizTracer', 'trace'):
-            return self.trace
-        if frame.f_code.co_filename.startswith('<frozen'):
-            return self.trace
+        # Trace the user's program only. Library and stdlib frames (random, dataclasses, numpy …)
+        # are not stepped through: returning None stops tracing inside them, while any user
+        # callback they invoke (a sort key, a map lambda) still gets its own 'call' event.
+        if frame.f_code.co_filename != '<user_code>':
+            return None
         if len(self.events) >= ${MAX_EVENTS}:
             raise ExecutionLimitExceeded(
                 f"Stopped after ${MAX_EVENTS} trace steps — possible infinite loop or very long computation.")
@@ -318,6 +416,21 @@ class _ProVizTracer:
 _tracer_instance = _ProVizTracer()
 
 # ---- Entry point called from JS ----
+def _proviz_preimport(code_str):
+    # Import the program's modules before tracing starts, so heavy packages (numpy, pandas)
+    # neither count against the step/time budget nor get stepped through.
+    import importlib
+    try:
+        from pyodide.code import find_imports
+        names = find_imports(code_str)
+    except Exception:
+        return
+    for name in names:
+        try:
+            importlib.import_module(name)
+        except Exception:
+            pass
+
 def _run_user_code(code_str):
     global _tracer_instance
     _tracer_instance = _ProVizTracer()
@@ -404,6 +517,30 @@ def _run_user_code(code_str):
     }
 
     /**
+     * Download any Pyodide packages the program imports (numpy, pandas, …) and import them
+     * untraced. Stdlib-only programs skip the download step instantly.
+     */
+    async _prepareImports(code) {
+        let loading = false;
+        try {
+            await this.pyodide.loadPackagesFromImports(code, {
+                messageCallback: msg => {
+                    if (!/^Load/i.test(msg)) return;
+                    loading = true;
+                    this._setStatus('loading', msg.replace(/\.*$/, '').trim() + '…');
+                },
+                errorCallback: msg => console.warn('[PythonExecutor] package load', msg),
+            });
+        } catch (err) {
+            console.warn('[PythonExecutor] could not load packages', err);
+        }
+        try {
+            this.pyodide.runPython('_proviz_preimport(_user_code_to_run)');
+        } catch { /* a missing module is reported by the traced run itself */ }
+        if (loading) this._setStatus('ready', 'Python runtime ready');
+    }
+
+    /**
      * Run Python code with automatic initialization.
      * @param {string|ExecutionRequest|object} input
      * @returns {Promise<object>}
@@ -451,6 +588,7 @@ def _run_user_code(code_str):
             }
 
             this.pyodide.globals.set('_user_code_to_run', code);
+            await this._prepareImports(code);
             const rawJson = await this.pyodide.runPythonAsync('_run_user_code(_user_code_to_run)');
             const raw = JSON.parse(rawJson);
             const durationMs = performance.now() - startMs;

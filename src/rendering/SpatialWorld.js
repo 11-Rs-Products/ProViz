@@ -90,6 +90,10 @@ const TRAY_TOP = TRAY_Y + 0.06;
 const BLOCK_Y = TRAY_TOP + 0.55 - TRAY_Y;   // primitive block (1.1 tall), local to a var group at TRAY_Y
 const SOCKET_Y = TRAY_TOP + 0.275 - TRAY_Y; // reference socket (0.55 tall)
 const CELL_Y = 0.06 + 0.25;                  // heap cell (0.5 tall), local to its tray
+const TABLE_CELL_SCALE_Y = 0.56;             // table cells are flatter tiles
+const TABLE_CELL_Y = 0.06 + 0.25 * TABLE_CELL_SCALE_Y;
+const TABLE_ROW_LABEL = 0.75;                // space for row labels on the left of a grid
+const TABLE_HEADER = 0.95;                   // space for column headers at the back of a grid
 
 const SEQUENCE_TYPES = new Set(['list', 'tuple', 'set', 'frozenset', 'deque', 'range', 'array']);
 
@@ -511,7 +515,10 @@ export class SpatialWorld {
         if (kind === 'reference') return t.ref;
         switch (type) {
             case 'int':
-            case 'float': return t.number;
+            case 'float':
+            case 'complex':
+            case 'Decimal':
+            case 'Fraction': return t.number;
             case 'str': return t.str;
             case 'bool': return t.bool;
             case 'NoneType': return t.none;
@@ -622,12 +629,23 @@ export class SpatialWorld {
             zCursor -= depth + 1.0;
         }
 
-        // Heap zone (right): one row of cells per object, stacked in depth.
+        // Heap zone (right): one row of cells per object (or a rows × columns grid for
+        // tables), stacked in depth with the first object at the front.
         let hz = 0.6;
         for (const o of world.objects) {
+            if (o.grid) {
+                const cols = Math.max(1, o.grid.columns.length);
+                const rows = Math.max(1, o.grid.rows.length);
+                const width = TABLE_ROW_LABEL + cols * CELL + 0.5;
+                const depth = TABLE_HEADER + rows * CELL + 0.5;
+                // Keep the front edge where a one-row tray's would be; the grid grows backwards.
+                slots.set(o.id, { x: HEAP_LEFT_EDGE + width / 2, y: TRAY_Y, z: hz + 0.625 - depth / 2, width, depth, grid: true });
+                hz -= depth + 2.6;
+                continue;
+            }
             const n = Math.max(1, o.cells.length + (o.overflow > 0 ? 1 : 0));
             const width = n * CELL + 0.5;
-            slots.set(o.id, { x: HEAP_LEFT_EDGE + width / 2, y: TRAY_Y, z: hz, width, n });
+            slots.set(o.id, { x: HEAP_LEFT_EDGE + width / 2, y: TRAY_Y, z: hz, width, n, depth: 1.25 });
             hz -= 3.8;
         }
         return slots;
@@ -770,19 +788,29 @@ export class SpatialWorld {
         node.info = { kind: 'object', name: o.className, type: o.type, value: `${o.className} with ${o.cells.length + o.overflow} item(s)`, objectId: o.objectId };
         node.width = slot.width;
 
-        gsap.to(node.base.scale, { x: slot.width, duration: instant ? 0 : TWEEN.move, ease: TWEEN.ease });
+        const depth = slot.depth || 1.25;
+        gsap.to(node.base.scale, { x: slot.width, z: depth / 1.25, duration: instant ? 0 : TWEEN.move, ease: TWEEN.ease });
 
-        const labelKey = `${o.className}|${o.cells.length}|${o.overflow}`;
+        const caption = o.grid
+            ? `${o.className}  ·  ${o.grid.totalRows} × ${o.grid.totalCols}`
+            : `${o.className}  ·  ${o.cells.length + o.overflow} ${countNoun(o.type, o.cells.length + o.overflow)}`;
+        const labelKey = `${caption}|${color}`;
         if (node.labelKey !== labelKey) {
             node.labelKey = labelKey;
-            const count = o.cells.length + o.overflow;
             replaceLabel(node.group, 'label', makeLabel([
-                { text: `${o.className}  ·  ${count} ${countNoun(o.type, count)}`, mono: true, weight: 600, color: cssHex(color) },
+                { text: caption, mono: true, weight: 600, color: cssHex(color) },
             ], { theme: th, size: 0.95 }));
         }
         // Caption sits in front of the tray (like frame captions) so it never floats over the object behind.
         const lbl = node.group.userData.label;
-        lbl.position.set(-slot.width / 2 + lbl.scale.x / 2, 0.25, 1.05);
+        lbl.position.set(-slot.width / 2 + lbl.scale.x / 2, 0.25, depth / 2 + 0.42);
+
+        if (o.grid) {
+            this._upsertGrid(node, o, slot, color, instant);
+            this._moveTo(node.group, slot, instant);
+            return;
+        }
+        this._clearGridHeaders(node);
 
         const liveCells = new Set();
         const total = slot.n;
@@ -838,6 +866,101 @@ export class SpatialWorld {
             if (!liveCells.has(cid)) this._removeCell(node, cid, instant);
         }
         this._moveTo(node.group, slot, instant);
+    }
+
+    /** Tables: cells laid out rows (back → front) × columns (left → right), with headers. */
+    _upsertGrid(node, o, slot, color, instant) {
+        const th = this.theme;
+        const { columns, rows } = o.grid;
+        const x0 = -slot.width / 2 + 0.25 + TABLE_ROW_LABEL + CELL / 2;
+        const z0 = -slot.depth / 2 + 0.25 + TABLE_HEADER + CELL / 2;
+        const live = new Set();
+
+        rows.forEach((row, r) => {
+            row.cells.forEach((c, ci) => {
+                live.add(c.id);
+                const local = { x: x0 + ci * CELL, y: TABLE_CELL_Y, z: z0 + r * CELL };
+                // Each table cell is coloured by its own value type (number, text, bool, ref…).
+                const cellColor = c.display === '' ? th.plate : this._typeColor(c.type, c.objectId ? 'reference' : 'primitive');
+                let cell = node.cells.get(c.id);
+                if (cell && cell.color !== cellColor) {
+                    cell.color = cellColor;
+                    cell.mesh.material.color.setHex(cellColor);
+                    cell.mesh.material.emissive?.setHex(cellColor);
+                }
+                if (!cell) {
+                    const mesh = new THREE.Mesh(this.geo.cell, this._solidMaterial(cellColor));
+                    mesh.scale.y = TABLE_CELL_SCALE_Y;
+                    mesh.castShadow = true;
+                    mesh.userData.nodeId = c.id;
+                    const g = new THREE.Group();
+                    g.add(mesh);
+                    g.position.set(local.x, local.y, local.z);
+                    node.group.add(g);
+                    cell = { id: c.id, kind: 'cell', group: g, mesh, parent: node, color: cellColor, labelKey: null };
+                    node.cells.set(c.id, cell);
+                    this.nodes.set(c.id, cell);
+                    this.pickables.push(mesh);
+                    this._grow(g, instant);
+                }
+                const colName = columns[ci] ?? String(ci);
+                cell.info = { kind: 'cell', name: `${o.className}[${row.label}][${colName}]`, type: o.type, value: c.display, objectId: c.objectId };
+                const labelKey = c.display;
+                if (cell.labelKey !== labelKey) {
+                    const changed = cell.labelKey !== null;
+                    cell.labelKey = labelKey;
+                    const label = makeLabel([{ text: c.display || ' ', mono: true, weight: 600, color: th.label.text }], { theme: th, size: 0.72, plate: false });
+                    label.position.set(0, 0.3, 0.16);
+                    replaceLabel(cell.group, 'label', label);
+                    if (changed && !instant) {
+                        gsap.fromTo(cell.mesh.material, { emissiveIntensity: th.flash }, { emissiveIntensity: th.emissive, duration: 0.7 });
+                    }
+                }
+                this._moveTo(cell.group, local, instant);
+            });
+        });
+        for (const cid of [...node.cells.keys()]) {
+            if (!live.has(cid)) this._removeCell(node, cid, instant);
+        }
+
+        // Column headers along the back edge, row labels down the left edge.
+        const hidden = [o.grid.hiddenRows ? `+${o.grid.hiddenRows} rows` : '', o.grid.hiddenCols ? `+${o.grid.hiddenCols} cols` : ''].filter(Boolean).join(' · ');
+        const headerKey = `${columns.join('\u0001')}|${rows.map(r => r.label).join('\u0001')}|${hidden}|${slot.width}|${slot.depth}`;
+        if (node.headerKey !== headerKey) {
+            this._clearGridHeaders(node);
+            node.headerKey = headerKey;
+            const headers = new THREE.Group();
+            columns.forEach((name, ci) => {
+                const l = makeLabel([{ text: name, mono: true, weight: 600, color: cssHex(color) }], { theme: th, size: 0.6, plate: false });
+                l.position.set(x0 + ci * CELL, 0.3, z0 - CELL * 1.05);
+                headers.add(l);
+            });
+            rows.forEach((row, r) => {
+                const l = makeLabel([{ text: row.label, mono: true, weight: 500, color: th.label.sub }], { theme: th, size: 0.56, plate: false });
+                l.position.set(x0 - CELL * 0.95, 0.3, z0 + r * CELL);
+                headers.add(l);
+            });
+            if (hidden) {
+                const l = makeLabel([{ text: hidden, weight: 500, color: th.label.sub }], { theme: th, size: 0.55, plate: false });
+                l.position.set(slot.width / 2 - l.scale.x / 2 - 0.2, 0.3, slot.depth / 2 - 0.1);
+                headers.add(l);
+            }
+            node.group.add(headers);
+            node.headers = headers;
+        }
+        if (node.group.userData.overflow) {
+            disposeObject3D(node.group.userData.overflow);
+            node.group.userData.overflow = null;
+            node.overflowKey = null;
+        }
+    }
+
+    _clearGridHeaders(node) {
+        if (!node.headers) return;
+        node.group.remove(node.headers);
+        disposeObject3D(node.headers, this._shared);
+        node.headers = null;
+        node.headerKey = null;
     }
 
     _removeCell(objNode, cid, instant) {
