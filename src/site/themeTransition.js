@@ -29,7 +29,9 @@ function ripple(x, y) {
     wave.style.left = `${x}px`;
     wave.style.top = `${y}px`;
     wave.innerHTML = '<i></i><i></i>';
-    document.body.appendChild(wave);
+    // Attach to <html>, not <body>: the public site scales <body> with `zoom` on large screens,
+    // which would multiply these viewport coordinates and push the rings off the toggle.
+    document.documentElement.appendChild(wave);
     setTimeout(() => wave.remove(), DURATION + 120);
 }
 

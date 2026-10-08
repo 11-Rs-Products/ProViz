@@ -21,11 +21,10 @@
 
     <!-- Hero -->
     <section class="hero">
-      <div class="site-wrap hero-grid">
-        <div class="hero-copy">
-          <span class="eyebrow">Visual code IDE</span>
-          <h1 class="hero-title">See your code <em>think.</em></h1>
-          <p class="hero-lede">Write code, run it in your browser, and step through it forwards and backwards in time — while every variable, list, object and reference takes shape in a live 3D world.</p>
+      <div class="site-wrap hero-head">
+        <h1 class="hero-title">See your code <em>think.</em></h1>
+        <div class="hero-side">
+          <p class="hero-lede">A visual IDE that runs your program in the browser, records every step, and lets you move through it in both directions while its variables, objects and references take shape in 3D.</p>
           <div class="hero-ctas">
             <button class="btn btn-primary btn-lg" data-action="google" data-signed-out-only>
               <svg class="i i-sm"><use href="#i-google"/></svg><span>Start with Google</span>
@@ -33,82 +32,54 @@
             <a class="btn btn-primary btn-lg" href="/app/" data-open-app data-signed-in-only hidden>
               <span>Open ProViz</span><svg class="i i-sm"><use href="#i-arrow-right"/></svg>
             </a>
-            <button class="btn btn-secondary btn-lg" data-action="guest" data-signed-out-only>
-              <span>Try without signing in</span>
-            </button>
+            <button class="btn btn-secondary btn-lg" data-action="guest" data-signed-out-only>Try without signing in</button>
           </div>
-          <div class="lang-row" aria-label="Supported languages">
-            <span class="lang-row-label">Languages</span>
-            <span class="lang-chip lang-chip--live"><span class="lang-dot"></span>Python</span>
-            <span class="lang-chip">Java <em>soon</em></span>
-            <span class="lang-chip">C++ <em>soon</em></span>
-            <span class="lang-chip">JavaScript <em>soon</em></span>
-          </div>
-          <ul class="hero-facts">
-            <li><svg class="i i-xs"><use href="#i-check"/></svg>Free to use</li>
-            <li><svg class="i i-xs"><use href="#i-check"/></svg>Nothing to install</li>
-            <li><svg class="i i-xs"><use href="#i-check"/></svg>Code stays in your browser</li>
-          </ul>
+          <p class="hero-note">Free · Nothing to install · Your code never leaves your device</p>
         </div>
+      </div>
 
-        <figure class="hero-visual" aria-label="ProViz showing code next to its 3D memory world">
-          <div class="mock-window">
-            <div class="mock-bar">
+      <div class="site-wrap">
+        <figure class="product" aria-label="The ProViz workspace: code editor, playback timeline and the 3D memory view">
+          <div class="pw" aria-hidden="true">
+            <div class="pw-titlebar">
               <span class="mock-dots"><i></i><i></i><i></i></span>
-              <span class="mock-file"><svg class="i i-xs"><use href="#i-file"/></svg>main.py</span>
-              <span class="mock-step">Step 9 / 24</span>
+              <span class="pw-title">ProViz — main.py</span>
             </div>
-            <div class="mock-body">
-              <div class="mock-code" aria-hidden="true">
-                <div class="cl"><span class="ln">1</span><span class="k">def</span> <span class="f">total</span>(values):</div>
-                <div class="cl"><span class="ln">2</span>    acc <span class="o">=</span> <span class="n">0</span></div>
-                <div class="cl"><span class="ln">3</span>    <span class="k">for</span> v <span class="k">in</span> values:</div>
-                <div class="cl is-exec"><span class="ln">4</span>        acc <span class="o">+=</span> v<span class="badge">acc = 8</span></div>
-                <div class="cl"><span class="ln">5</span>    <span class="k">return</span> acc</div>
-                <div class="cl"><span class="ln">6</span></div>
-                <div class="cl"><span class="ln">7</span>nums <span class="o">=</span> [<span class="n">3</span>, <span class="n">1</span>, <span class="n">4</span>, <span class="n">1</span>]</div>
-                <div class="cl"><span class="ln">8</span>alias <span class="o">=</span> nums</div>
-                <div class="cl"><span class="ln">9</span>s <span class="o">=</span> <span class="f">total</span>(nums)</div>
+            <div class="pw-appbar">
+              <span class="pw-brand"><span class="pw-mark"></span>ProViz</span>
+              <span class="pw-tabs"><span><svg class="i i-xs"><use href="#i-cube"/></svg>Visualizer</span></span>
+              <span class="pw-right"><span class="pw-chip"><span class="dot"></span>Python ready</span><span class="pw-run"><svg class="i i-xs"><use href="#i-play"/></svg>Run</span></span>
+            </div>
+            <div class="pw-body">
+              <div class="pw-left">
+                <div class="pw-code">
+                  <div class="cl"><span class="gt"></span><span class="ln">1</span><span class="k">def</span> <span class="f">total</span>(values):</div>
+                  <div class="cl"><span class="gt"></span><span class="ln">2</span>    acc <span class="o">=</span> <span class="n">0</span></div>
+                  <div class="cl"><span class="gt"></span><span class="ln">3</span>    <span class="k">for</span> v <span class="k">in</span> values:</div>
+                  <div class="cl"><span class="gt"></span><span class="ln">4</span>        acc <span class="o">+=</span> v</div>
+                  <div class="cl"><span class="gt"></span><span class="ln">5</span>    <span class="k">return</span> acc</div>
+                  <div class="cl"><span class="gt"></span><span class="ln">6</span></div>
+                  <div class="cl"><span class="gt"></span><span class="ln">7</span>nums <span class="o">=</span> [<span class="n">3</span>, <span class="n">1</span>, <span class="n">4</span>, <span class="n">5</span>]<span class="badge badge-new">nums = [3, 1, 4, 5]</span></div>
+                  <div class="cl"><span class="gt"></span><span class="ln">8</span>alias <span class="o">=</span> nums</div>
+                  <div class="cl is-exec"><span class="gt"><i class="bp"></i></span><span class="ln">9</span>s <span class="o">=</span> <span class="f">total</span>(nums)<span class="badge">s = 13</span></div>
+                  <div class="cl"><span class="gt"></span><span class="ln">10</span><span class="f">print</span>(s)</div>
+                </div>
+                <div class="pw-explain">
+                  <span class="pw-badge">Return</span>
+                  <p><code>total()</code> returned <code>13</code> and it was assigned to <code>s</code>.</p>
+                </div>
+                <div class="pw-transport">
+                  <div class="pw-buttons"><i></i><i></i><b><svg class="i i-xs"><use href="#i-play"/></svg>Play</b><i></i><i></i><i></i></div>
+                  <div class="pw-track"><span class="pw-fill"></span><span class="tk tk-call" style="left:12%"></span><span class="tk tk-call" style="left:38%"></span><span class="tk tk-bp" style="left:61%"></span><span class="tk tk-call" style="left:70%"></span><span class="pw-thumb"></span></div>
+                  <div class="pw-counter">22 / 26</div>
+                </div>
               </div>
-              <div class="mock-world" aria-hidden="true">
-                <svg viewBox="0 0 360 300" class="world-svg">
-                  <defs>
-                    <pattern id="mw-grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" class="mw-gridline"/></pattern>
-                  </defs>
-                  <rect width="360" height="300" fill="url(#mw-grid)"/>
-                  <!-- frames -->
-                  <g transform="translate(18 18)">
-                    <rect width="132" height="118" rx="10" class="mw-plate"/>
-                    <text x="12" y="20" class="mw-frame-label">&lt;module&gt;</text>
-                    <g transform="translate(12 32)"><rect width="108" height="22" rx="6" class="mw-var mw-ref"/><text x="9" y="15" class="mw-var-name">nums</text><circle cx="96" cy="11" r="3.5" class="mw-dot-ref"/></g>
-                    <g transform="translate(12 60)"><rect width="108" height="22" rx="6" class="mw-var mw-ref"/><text x="9" y="15" class="mw-var-name">alias</text><circle cx="96" cy="11" r="3.5" class="mw-dot-ref"/></g>
-                    <g transform="translate(12 88)"><rect width="108" height="22" rx="6" class="mw-var mw-muted"/><text x="9" y="15" class="mw-var-name">s</text><text x="100" y="15" class="mw-val" text-anchor="end">…</text></g>
-                  </g>
-                  <g transform="translate(18 152)">
-                    <rect width="132" height="124" rx="10" class="mw-plate mw-plate-active"/>
-                    <text x="12" y="20" class="mw-frame-label">total()</text>
-                    <g transform="translate(12 32)"><rect width="108" height="22" rx="6" class="mw-var mw-ref"/><text x="9" y="15" class="mw-var-name">values</text><circle cx="96" cy="11" r="3.5" class="mw-dot-ref"/></g>
-                    <g transform="translate(12 60)"><rect width="108" height="22" rx="6" class="mw-var mw-num mw-changed"/><text x="9" y="15" class="mw-var-name">acc</text><text x="100" y="15" class="mw-val" text-anchor="end">8</text></g>
-                    <g transform="translate(12 88)"><rect width="108" height="22" rx="6" class="mw-var mw-num"/><text x="9" y="15" class="mw-var-name">v</text><text x="100" y="15" class="mw-val" text-anchor="end">4</text></g>
-                  </g>
-                  <!-- heap list -->
-                  <g transform="translate(208 104)">
-                    <text x="0" y="-10" class="mw-frame-label">list · 4 items</text>
-                    <rect width="134" height="40" rx="9" class="mw-obj"/>
-                    <g class="mw-cells">
-                      <rect x="8" y="8" width="26" height="24" rx="5"/><rect x="38" y="8" width="26" height="24" rx="5"/>
-                      <rect x="68" y="8" width="26" height="24" rx="5" class="mw-cell-hot"/><rect x="98" y="8" width="26" height="24" rx="5"/>
-                    </g>
-                    <text x="21" y="25" class="mw-cell-val" text-anchor="middle">3</text><text x="51" y="25" class="mw-cell-val" text-anchor="middle">1</text>
-                    <text x="81" y="25" class="mw-cell-val" text-anchor="middle">4</text><text x="111" y="25" class="mw-cell-val" text-anchor="middle">1</text>
-                  </g>
-                  <!-- reference arcs: three names, one list -->
-                  <path d="M126 61 C 168 56, 176 112, 208 118" class="mw-arc"/>
-                  <path d="M126 89 C 166 96, 180 124, 208 124" class="mw-arc"/>
-                  <path d="M126 195 C 172 196, 186 136, 208 130" class="mw-arc"/>
-                  <circle cx="208" cy="118" r="3" class="mw-arc-end"/><circle cx="208" cy="124" r="3" class="mw-arc-end"/><circle cx="208" cy="130" r="3" class="mw-arc-end"/>
-                </svg>
-                <span class="mock-chip"><code>L4</code> · <code>acc</code> grows from 4 to 8</span>
+              <div class="pw-world">
+                <div class="pw-legend"><span><i class="sw-number"></i>Number</span><span><i class="sw-ref"></i>Reference</span><span><i class="sw-obj"></i>Object</span></div>
+                <span class="pw-fit"><svg class="i i-xs"><use href="#i-fit"/></svg>Fit</span>
+                <img class="pw-shot pw-shot--light" src="/landing/world-light.webp" alt="" width="1460" height="764" decoding="async" fetchpriority="high" />
+                <img class="pw-shot pw-shot--dark" src="/landing/world-dark.webp" alt="" width="1460" height="764" decoding="async" />
+                <span class="pw-step"><code>L9</code> · <code>s</code> = 13</span>
               </div>
             </div>
           </div>
@@ -116,54 +87,80 @@
       </div>
     </section>
 
-    <!-- Proof strip -->
-    <section class="proof-strip" aria-label="Highlights">
-      <div class="site-wrap proof-grid">
-        <div><strong>Real runtimes</strong><span>Compiled to WebAssembly, right in the tab</span></div>
-        <div><strong>Every step</strong><span>Recorded, replayable, reversible</span></div>
-        <div><strong>Zero setup</strong><span>No installs, no servers, no config</span></div>
-        <div><strong>Light &amp; dark</strong><span>Two hand-tuned themes for long sessions</span></div>
-      </div>
-    </section>
-
     <!-- Features -->
     <section class="site-section" id="features">
       <div class="site-wrap">
-        <header class="section-head">
-          <span class="eyebrow">Features</span>
+        <header class="section-head section-head--split">
           <h2 class="section-title">A debugger that <em>shows its work.</em></h2>
-          <p class="section-lede">ProViz records everything your program does, so you can explore it like a timeline instead of guessing from print statements.</p>
+          <p class="section-lede">Every line, call, return and change is recorded, so you explore what your program did instead of guessing from print statements.</p>
         </header>
-        <div class="feature-grid">
-          <article class="feature">
-            <span class="feature-icon tone-wine"><svg class="i"><use href="#i-clock"/></svg></span>
-            <h3>Time-travel debugging</h3>
-            <p>Step over, into and out of calls — then step <em>backwards</em>. Scrub the timeline to any moment and the whole program state follows.</p>
+        <div class="bento">
+          <article class="tile tile--wide">
+            <div class="tile-ui ui-timeline" aria-hidden="true">
+              <div class="ut-buttons"><i></i><i></i><b><svg class="i i-xs"><use href="#i-pause"/></svg>Pause</b><i></i><i></i><i></i><i></i></div>
+              <div class="ut-row"><span>14 / 36</span><div class="ut-track"><span class="ut-fill"></span><span class="tk tk-call" style="left:8%"></span><span class="tk tk-call" style="left:22%"></span><span class="tk tk-call" style="left:47%"></span><span class="tk tk-bp" style="left:58%"></span><span class="tk tk-exc" style="left:86%"></span><span class="ut-thumb"></span></div></div>
+              <div class="ut-legend"><span><i class="lg-call"></i>Call</span><span><i class="lg-bp"></i>Breakpoint</span><span><i class="lg-exc"></i>Error</span></div>
+            </div>
+            <h3>Step forwards and backwards</h3>
+            <p>Step over, into and out of calls, then step back. Drag the timeline to any moment and the whole program state follows.</p>
           </article>
-          <article class="feature">
-            <span class="feature-icon tone-gold"><svg class="i"><use href="#i-cube"/></svg></span>
-            <h3>A live 3D memory world</h3>
-            <p>Call frames, variables, lists, dictionaries and objects are laid out in space and glide to their new state with every step.</p>
+          <article class="tile">
+            <div class="tile-ui ui-inline" aria-hidden="true">
+              <div class="cl"><span class="ln">7</span>nums <span class="o">=</span> [<span class="n">3</span>, <span class="n">1</span>]<span class="badge badge-new">nums = [3, 1]</span></div>
+              <div class="cl"><span class="ln">8</span>nums.append(<span class="n">4</span>)<span class="badge">nums = [3, 1, 4]</span></div>
+              <div class="cl"><span class="ln">9</span>n <span class="o">=</span> <span class="f">len</span>(nums)<span class="badge badge-new">n = 3</span></div>
+            </div>
+            <h3>Values right in your code</h3>
+            <p>Changed values appear at the end of the line that changed them.</p>
           </article>
-          <article class="feature">
-            <span class="feature-icon tone-plum"><svg class="i"><use href="#i-branch"/></svg></span>
+          <article class="tile">
+            <div class="tile-ui ui-refs" aria-hidden="true">
+              <svg viewBox="0 0 260 120">
+                <rect class="r-var" x="10" y="18" width="78" height="26" rx="6"/><text x="22" y="35">a</text><circle class="r-dot" cx="78" cy="31" r="3.5"/>
+                <rect class="r-var" x="10" y="72" width="78" height="26" rx="6"/><text x="22" y="89">b</text><circle class="r-dot" cx="78" cy="85" r="3.5"/>
+                <rect class="r-obj" x="160" y="42" width="90" height="34" rx="7"/>
+                <rect class="r-cell" x="167" y="49" width="22" height="20" rx="4"/><rect class="r-cell" x="194" y="49" width="22" height="20" rx="4"/><rect class="r-cell" x="221" y="49" width="22" height="20" rx="4"/>
+                <path class="r-arc" d="M78 31 C 120 24, 130 50, 160 56"/><path class="r-arc" d="M78 85 C 120 92, 130 66, 160 62"/>
+              </svg>
+            </div>
             <h3>References you can see</h3>
-            <p>Aliasing stops being a mystery: two names pointing at one list draw two arcs landing on the same object.</p>
+            <p>Two names, one list: aliasing draws two arcs to the same object.</p>
           </article>
-          <article class="feature">
-            <span class="feature-icon tone-wine"><svg class="i"><use href="#i-dot-target"/></svg></span>
-            <h3>Breakpoints &amp; inline values</h3>
-            <p>Click the gutter to set a breakpoint, continue to it, and read changed values right at the end of each line.</p>
+          <article class="tile">
+            <div class="tile-ui ui-bp" aria-hidden="true">
+              <div class="cl"><span class="gt"></span><span class="ln">16</span>origin <span class="o">=</span> <span class="f">Point</span>(<span class="n">0</span>, <span class="n">0</span>)</div>
+              <div class="cl is-exec"><span class="gt"><i class="bp"></i></span><span class="ln">17</span>s <span class="o">=</span> <span class="f">total</span>(nums)</div>
+              <div class="ui-bp-note"><span class="pw-badge">Breakpoint</span>Paused on line 17</div>
+            </div>
+            <h3>Breakpoints</h3>
+            <p>Click the gutter, press F8, and execution jumps to the next breakpoint.</p>
           </article>
-          <article class="feature">
-            <span class="feature-icon tone-gold"><svg class="i"><use href="#i-chat"/></svg></span>
-            <h3>Plain-English explanations</h3>
-            <p>Every step is narrated — what changed, which function was called, what was returned — so beginners never feel lost.</p>
+          <article class="tile">
+            <div class="tile-ui ui-error" aria-hidden="true">
+              <div class="ue-head"><span class="ue-icon"><svg class="i i-xs"><use href="#i-alert"/></svg></span><div><strong>ZeroDivisionError</strong><span>main.py, line 2</span></div></div>
+              <p>division by zero</p>
+            </div>
+            <h3>Errors that point somewhere</h3>
+            <p>Failures arrive as a clear card that jumps to the exact line. Runaway loops are stopped safely.</p>
           </article>
-          <article class="feature">
-            <span class="feature-icon tone-plum"><svg class="i"><use href="#i-shield"/></svg></span>
-            <h3>A sandbox that can't hang</h3>
-            <p>Infinite loops and runaway recursion are stopped safely, and errors arrive as clear cards that point to the exact line.</p>
+          <article class="tile">
+            <div class="tile-ui ui-explain" aria-hidden="true">
+              <div class="ux-row"><span class="pw-badge">Call</span><span><code>total(values=[3, 1, 4, 5])</code> starts a new frame.</span></div>
+              <div class="ux-row"><span class="pw-badge">Change</span><span><code>acc</code> goes from <code>4</code> to <code>8</code>.</span></div>
+              <div class="ux-row"><span class="pw-badge">Return</span><span><code>total()</code> returns <code>13</code>.</span></div>
+            </div>
+            <h3>Every step, in plain words</h3>
+            <p>Each step is narrated: what changed, what was called and what came back.</p>
+          </article>
+          <article class="tile tile--wide">
+            <div class="tile-ui ui-langs" aria-hidden="true">
+              <span class="lang-chip lang-chip--live"><span class="lang-dot"></span>Python</span>
+              <span class="lang-chip">Java <em>soon</em></span>
+              <span class="lang-chip">C++ <em>soon</em></span>
+              <span class="lang-chip">JavaScript <em>soon</em></span>
+            </div>
+            <h3>Runs in the browser</h3>
+            <p>Python today, compiled to WebAssembly. More languages are on the way.</p>
           </article>
         </div>
       </div>
@@ -173,7 +170,6 @@
     <section class="site-section site-section--tinted" id="how-it-works">
       <div class="site-wrap">
         <header class="section-head">
-          <span class="eyebrow">How it works</span>
           <h2 class="section-title">From blank file to <em>insight</em> in seconds.</h2>
         </header>
         <ol class="steps">
@@ -199,41 +195,39 @@
     <!-- Roles -->
     <section class="site-section" id="roles">
       <div class="site-wrap">
-        <header class="section-head">
-          <span class="eyebrow">Access</span>
-          <h2 class="section-title">One product, <em>two kinds of access.</em></h2>
-          <p class="section-lede">Everyone gets the full Visualizer with general access. The ProViz developer team gets the verification studios on top.</p>
+        <header class="section-head section-head--split">
+          <h2 class="section-title">Start as a guest, <em>or sign in.</em></h2>
+          <p class="section-lede">Both give you the complete Visualizer and debugger. Signing in simply ties your session to your Google account.</p>
         </header>
-        <div class="role-grid">
-          <article class="role-card">
-            <span class="role-pill role-pill--user">General access</span>
-            <h3>For everyone</h3>
-            <p>Everything needed to understand a program and nothing that distracts from it — signed in or as a guest.</p>
-            <ul class="check-list">
-              <li><svg class="i i-xs"><use href="#i-check"/></svg>3D Visualizer and time-travel debugger</li>
-              <li><svg class="i i-xs"><use href="#i-check"/></svg>Curated examples and a free scratchpad</li>
-              <li><svg class="i i-xs"><use href="#i-check"/></svg>Step-by-step explanations</li>
+        <div class="access-grid">
+          <article class="access-card">
+            <div class="access-head">
+              <span class="role-pill">Guest</span>
+              <span class="access-meta">No account needed</span>
+            </div>
+            <h3>Try it instantly</h3>
+            <p>Open the Visualizer straight from this page. Nothing to fill in, nothing stored about you.</p>
+            <ul class="access-list">
+              <li><svg class="i i-xs"><use href="#i-check"/></svg>Full Visualizer and time-travel debugger</li>
+              <li><svg class="i i-xs"><use href="#i-check"/></svg>Examples and a free scratchpad</li>
+              <li><svg class="i i-xs"><use href="#i-check"/></svg>Preferences kept in this browser only</li>
             </ul>
+            <button class="btn btn-secondary btn-lg" data-action="guest">Try without signing in</button>
           </article>
-          <article class="role-card">
-            <span class="role-pill role-pill--admin">Developer · Admin</span>
-            <h3>Verification studios</h3>
-            <p>For the developers who build and maintain ProViz and need to reason about quality across the whole project.</p>
-            <ul class="check-list">
-              <li><svg class="i i-xs"><use href="#i-check"/></svg>Everything in general access</li>
-              <li><svg class="i i-xs"><use href="#i-check"/></svg>Control Center, Release Gates and Continuous</li>
-              <li><svg class="i i-xs"><use href="#i-check"/></svg>Project insights and audit export</li>
+          <article class="access-card access-card--featured">
+            <div class="access-head">
+              <span class="role-pill role-pill--user">General</span>
+              <span class="access-meta">Any Google account</span>
+            </div>
+            <h3>Sign in with Google</h3>
+            <p>The same workspace, with your name and picture in the app and a session that stays signed in between visits.</p>
+            <ul class="access-list">
+              <li><svg class="i i-xs"><use href="#i-check"/></svg>Everything in guest access</li>
+              <li><svg class="i i-xs"><use href="#i-check"/></svg>Your profile and access level shown in the app</li>
+              <li><svg class="i i-xs"><use href="#i-check"/></svg>Stay signed in until you sign out</li>
             </ul>
-          </article>
-          <article class="role-card">
-            <span class="role-pill role-pill--superadmin">Developer · Super admin</span>
-            <h3>Governance</h3>
-            <p>For the owners accountable for how much the verification engine is allowed to do on its own.</p>
-            <ul class="check-list">
-              <li><svg class="i i-xs"><use href="#i-check"/></svg>Everything admins get</li>
-              <li><svg class="i i-xs"><use href="#i-check"/></svg>Autonomy level, safe mode and certificates</li>
-              <li><svg class="i i-xs"><use href="#i-check"/></svg>Team &amp; roles overview</li>
-            </ul>
+            <button class="btn btn-primary btn-lg" data-action="google" data-signed-out-only><svg class="i i-sm"><use href="#i-google"/></svg><span>Continue with Google</span></button>
+            <a class="btn btn-primary btn-lg" href="/app/" data-open-app data-signed-in-only hidden><span>Open ProViz</span><svg class="i i-sm"><use href="#i-arrow-right"/></svg></a>
           </article>
         </div>
       </div>
@@ -255,30 +249,39 @@
     <!-- FAQ -->
     <section class="site-section site-section--tinted" id="faq">
       <div class="site-wrap faq-wrap">
-        <header class="section-head">
-          <span class="eyebrow">FAQ</span>
+        <header class="faq-intro">
           <h2 class="section-title">Questions, <em>answered.</em></h2>
+          <p class="section-lede">The short version of how ProViz works and what it does with your code.</p>
+          <a class="faq-contact" href="https://github.com/11-Rs-Products/ProViz/issues" target="_blank" rel="noopener">
+            <svg class="i i-sm"><use href="#i-chat"/></svg>
+            <span><strong>Still have a question?</strong> Ask us on GitHub</span>
+            <svg class="i i-sm"><use href="#i-arrow-right"/></svg>
+          </a>
         </header>
         <div class="faq">
           <details>
-            <summary>Do I need an account?<svg class="i i-sm"><use href="#i-chevron-down"/></svg></summary>
-            <p>No. Choose “Try without signing in” to use the Visualizer straight away. Signing in with any Google account keeps your preferences and role, so developer accounts get their studios automatically.</p>
+            <summary><span>Do I need an account?</span><i class="faq-icon" aria-hidden="true"></i></summary>
+            <div class="faq-a"><p>No. Choose “Try without signing in” to use the Visualizer straight away. Signing in with any Google account adds your profile to the app and keeps you signed in between visits.</p></div>
           </details>
           <details>
-            <summary>Which languages are supported?<svg class="i i-sm"><use href="#i-chevron-down"/></svg></summary>
-            <p>ProViz currently supports Python — standard CPython compiled to WebAssembly, including the standard library. Java, C++ and JavaScript are planned for future updates. Interactive <code>input()</code> is not supported yet.</p>
+            <summary><span>Which languages are supported?</span><i class="faq-icon" aria-hidden="true"></i></summary>
+            <div class="faq-a"><p>ProViz currently supports Python — standard CPython compiled to WebAssembly, including the standard library. Java, C++ and JavaScript are planned for future updates. Interactive <code>input()</code> is not supported yet.</p></div>
           </details>
           <details>
-            <summary>Is my code uploaded anywhere?<svg class="i i-sm"><use href="#i-chevron-down"/></svg></summary>
-            <p>No. Execution and tracing happen locally in your browser tab. The only network requests are for the language runtime, fonts and, if you sign in, Google authentication.</p>
+            <summary><span>Is my code uploaded anywhere?</span><i class="faq-icon" aria-hidden="true"></i></summary>
+            <div class="faq-a"><p>No. Execution and tracing happen locally in your browser tab. The only network requests are for the language runtime, fonts and, if you sign in, Google authentication.</p></div>
           </details>
           <details>
-            <summary>What happens if my program loops forever?<svg class="i i-sm"><use href="#i-chevron-down"/></svg></summary>
-            <p>ProViz stops execution safely after a step and time budget, then lets you inspect everything that happened up to that point.</p>
+            <summary><span>What happens if my program loops forever?</span><i class="faq-icon" aria-hidden="true"></i></summary>
+            <div class="faq-a"><p>ProViz stops execution safely after a step and time budget, then lets you inspect everything that happened up to that point.</p></div>
           </details>
           <details>
-            <summary>What is developer access?<svg class="i i-sm"><use href="#i-chevron-down"/></svg></summary>
-            <p>Developer access (Admin and Super admin) is reserved for the team that builds and operates ProViz. Everyone else gets general access, which includes the complete Visualizer and debugger.</p>
+            <summary><span>Does it work on tablets and phones?</span><i class="faq-icon" aria-hidden="true"></i></summary>
+            <div class="faq-a"><p>Yes. On smaller screens the workspace stacks the editor, playback controls and 3D view vertically, and the 3D view supports touch to orbit and zoom. A larger screen is more comfortable for longer programs.</p></div>
+          </details>
+          <details>
+            <summary><span>Is ProViz free?</span><i class="faq-icon" aria-hidden="true"></i></summary>
+            <div class="faq-a"><p>Yes. The Visualizer and debugger are free to use, signed in or as a guest.</p></div>
           </details>
         </div>
       </div>

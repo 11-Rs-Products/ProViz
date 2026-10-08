@@ -25,6 +25,10 @@
   --dur: 200ms;
 
   --header-h: 56px;
+
+  /* Neutral light/shade used to lighten or darken a type colour for 3D faces. */
+  --iso-hi: #FFFFFF;
+  --iso-lo: #000000;
 }
 
 /* ---------- Tokens: Velvet (light) ---------- */
@@ -680,9 +684,10 @@ kbd {
 }
 
 .page {
-  max-width: 1360px;
+  /* Fluid: dashboards use the screen on large displays instead of a fixed narrow column. */
+  max-width: calc(1680px + 2 * clamp(20px, 3.4vw, 64px));
   margin: 0 auto;
-  padding: 36px 40px 56px;
+  padding: 36px clamp(20px, 3.4vw, 64px) 56px;
   display: flex;
   flex-direction: column;
   gap: 20px;

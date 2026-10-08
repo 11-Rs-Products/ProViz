@@ -1600,7 +1600,7 @@ $('up-signin')?.addEventListener('click', async () => {
 document.querySelectorAll('[data-year]').forEach(el => { el.textContent = String(new Date().getFullYear()); });
 
 // Dev-only diagnostics handle (e.g. __proviz.world.stats() for WebGL leak checks).
-if (import.meta.env?.DEV) window.__proviz = { world, playback, executor };
+if (import.meta.env?.DEV) window.__proviz = { world, playback, executor, editor };
 
 if (import.meta.hot) {
     import.meta.hot.dispose(() => {
