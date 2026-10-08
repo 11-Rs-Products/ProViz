@@ -1,0 +1,20 @@
+  <div class="auth-dialog-backdrop" id="auth-dialog" hidden>
+    <div class="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-dialog-title">
+      <button class="icon-btn icon-btn-sm auth-dialog-close" data-close-auth aria-label="Close"><svg class="i i-xs"><use href="#i-x"/></svg></button>
+      <span class="brand-mark auth-dialog-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32"><rect width="32" height="32" rx="9" class="bm-bg"/><circle cx="11" cy="20.5" r="3.4" class="bm-a"/><circle cx="21.5" cy="11.5" r="3.4" class="bm-b"/><path d="M11 16.6c0-5.6 4.2-7.6 7.3-6.6" class="bm-arc"/></svg>
+      </span>
+      <h2 id="auth-dialog-title">Welcome to <em>ProViz</em></h2>
+      <p class="auth-dialog-lede">Sign in to keep your role and preferences, or jump straight into the Visualizer as a guest.</p>
+      <button class="btn btn-google" data-action="google">
+        <svg class="i"><use href="#i-google"/></svg><span>Continue with Google</span>
+      </button>
+      <div class="auth-divider"><span>or</span></div>
+      <button class="btn btn-secondary btn-block" data-action="guest">
+        <svg class="i i-sm"><use href="#i-eye"/></svg><span>Try without signing in</span>
+      </button>
+      <p class="auth-dialog-error" data-auth-error role="alert" hidden></p>
+      <p class="auth-dialog-fine">Any Google account works. By continuing you agree to the <a href="/terms/">Terms</a> and acknowledge the <a href="/privacy/">Privacy Policy</a>.</p>
+    </div>
+  </div>
+  <div class="toast-region" id="toast-region" aria-live="polite"></div>

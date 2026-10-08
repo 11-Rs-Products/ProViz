@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="app-root">
+<head>
+<!--@head-->
+  <title>ProViz — Studio</title>
+  <meta name="description" content="ProViz studio: write code, step through it in time and explore its state in 3D." />
+  <meta name="robots" content="noindex" />
+  <script defer src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+</head>
+<body class="proviz-os-app">
+
+<!--@icons-->
+
+  <div class="app-boot" id="app-boot" role="status" aria-live="polite">
+    <div class="app-boot-inner">
+      <span class="brand-mark app-boot-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32"><rect width="32" height="32" rx="9" class="bm-bg"/><circle cx="11" cy="20.5" r="3.4" class="bm-a"/><circle cx="21.5" cy="11.5" r="3.4" class="bm-b"/><path d="M11 16.6c0-5.6 4.2-7.6 7.3-6.6" class="bm-arc"/></svg>
+      </span>
+      <span class="app-boot-text">Opening your workspace…</span>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       APP HEADER
+       =================================================================== -->
+  <header id="os-global-header">
+    <div class="header-left">
+      <a class="brand" href="/" aria-label="ProViz home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32"><rect width="32" height="32" rx="9" class="bm-bg"/><circle cx="11" cy="20.5" r="3.4" class="bm-a"/><circle cx="21.5" cy="11.5" r="3.4" class="bm-b"/><path d="M11 16.6c0-5.6 4.2-7.6 7.3-6.6" class="bm-arc"/></svg>
+        </span>
+        <span class="brand-word">Pro<em>Viz</em></span>
+      </a>
+      <span class="header-divider" aria-hidden="true"></span>
+      <span class="workspace-crumb" id="studio-crumb">
+        <svg class="i i-sm"><use href="#i-cube"/></svg>
+        <span>Visualizer</span>
+      </span>
+    </div>
+
+    <nav class="os-main-nav" aria-label="Studios">
+      <button class="nav-tab-btn active" data-view="os-control">
+        <svg class="i"><use href="#i-overview"/></svg><span>Control Center</span>
+      </button>
+      <button class="nav-tab-btn" data-view="visualizer-3d">
+        <svg class="i"><use href="#i-cube"/></svg><span>Visualizer</span>
+      </button>
+      <button class="nav-tab-btn" data-view="gates-studio">
+        <svg class="i"><use href="#i-shield"/></svg><span>Release Gates</span>
+      </button>
+      <button class="nav-tab-btn" data-view="continuous-loop">
+        <svg class="i"><use href="#i-loop"/></svg><span>Continuous</span>
+      </button>
+      <button class="nav-tab-btn" data-view="project-intel">
+        <svg class="i"><use href="#i-chart"/></svg><span>Insights</span>
+      </button>
+      <button class="nav-tab-btn" data-view="team-roles">
+        <svg class="i"><use href="#i-users"/></svg><span>Team</span>
+      </button>
+    </nav>
+
+    <div class="header-right">
+      <button class="command-trigger" id="btn-open-palette" title="Command palette (⌘K)">
+        <svg class="i i-sm"><use href="#i-search"/></svg>
+        <span>Search or run…</span>
+        <kbd>⌘K</kbd>
+      </button>
+      <div id="os-status-badge" class="os-badge badge-ready" title="Verification engine state">
+        <span class="status-dot"></span>
+        <span id="os-badge-state-text">READY (S0)</span>
+      </div>
+      <button class="icon-btn theme-toggle" id="theme-toggle" title="Switch theme" aria-label="Switch between light and dark theme">
+        <svg class="i theme-icon-sun"><use href="#i-sun"/></svg>
+        <svg class="i theme-icon-moon"><use href="#i-moon"/></svg>
+      </button>
+      <div class="user-menu" id="user-menu">
+        <button class="user-chip" id="user-chip" aria-haspopup="true" aria-expanded="false" aria-controls="user-popover">
+          <span class="avatar" id="user-avatar" aria-hidden="true"></span>
+          <span class="role-pill" id="user-role-pill">Guest</span>
+          <svg class="i i-xs user-chip-caret"><use href="#i-chevron-down"/></svg>
+        </button>
+        <div class="user-popover" id="user-popover" role="menu" hidden>
+          <div class="up-identity">
+            <span class="avatar avatar-lg" id="up-avatar" aria-hidden="true"></span>
+            <div class="up-identity-text">
+              <strong id="up-name">Guest</strong>
+              <span id="up-email">Not signed in</span>
+            </div>
+          </div>
+          <div class="up-role">
+            <div class="up-role-row">
+              <span class="up-role-label">Your role</span>
+              <span class="role-pill" id="up-role-pill">Guest</span>
+            </div>
+            <p id="up-role-summary"></p>
+            <p class="up-preview" id="up-preview" hidden>Development preview — not a real account.</p>
+          </div>
+          <div class="up-actions">
+            <a class="up-item" href="/" role="menuitem"><svg class="i i-sm"><use href="#i-overview"/></svg>ProViz home</a>
+            <button class="up-item" id="up-theme" role="menuitem"><svg class="i i-sm"><use href="#i-moon"/></svg><span>Dark theme</span></button>
+            <button class="up-item" id="up-signin" role="menuitem" hidden><svg class="i i-sm"><use href="#i-google"/></svg>Sign in with Google</button>
+            <button class="up-item up-item--danger" id="up-signout" role="menuitem"><svg class="i i-sm"><use href="#i-logout"/></svg><span>Sign out</span></button>
+          </div>
+          <div class="up-foot">
+            <a href="/privacy/">Privacy</a><span aria-hidden="true">·</span><a href="/terms/">Terms</a>
+            <span class="up-foot-credit">Built by <a href="https://github.com/11-Rs-Products" target="_blank" rel="noopener">11Rs Products</a></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="os-viewport-container">
+
+    <!-- ===================================================================
+         CONTROL CENTER
+         =================================================================== -->
+    <section id="view-os-control" class="studio-viewport-panel active">
+      <div class="page">
+        <header class="page-head">
+          <div class="page-head-text">
+            <span class="eyebrow">Control Center</span>
+            <h1 class="page-title">Verification, <em>at a glance.</em></h1>
+            <p class="page-lede">One policy-bounded coordinator for formal, symbolic, empirical, security, performance and concurrency checks — with every decision recorded.</p>
+          </div>
+          <div class="page-head-actions">
+            <label class="field-inline" for="os-autonomy-level-picker" data-cap="governance.autonomy" data-cap-mode="disable">
+              <span>Autonomy</span>
+              <select id="os-autonomy-level-picker" class="select">
+                <option value="LEVEL_0_OBSERVE_ONLY">L0 · Observe only</option>
+                <option value="LEVEL_1_ADVISORY">L1 · Advisory</option>
+                <option value="LEVEL_2_AUTO_VERIFY">L2 · Auto-verify</option>
+                <option value="LEVEL_3_AUTO_REPAIR" selected>L3 · Auto-repair</option>
+                <option value="LEVEL_4_AUTO_REFACTOR">L4 · Auto-refactor</option>
+                <option value="LEVEL_5_FULL_AUTONOMOUS_OPERATION">L5 · Fully autonomous</option>
+              </select>
+            </label>
+            <button id="btn-run-os-pipeline" class="btn btn-primary">
+              <svg class="i i-sm"><use href="#i-bolt"/></svg><span>Run verification loop</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="action-bar" role="toolbar" aria-label="Verification actions">
+          <button id="btn-evaluate-release-gate" class="btn btn-secondary">
+            <svg class="i i-sm"><use href="#i-shield"/></svg><span>Evaluate release</span>
+          </button>
+          <button id="btn-auto-repair-acid" class="btn btn-secondary">
+            <svg class="i i-sm"><use href="#i-wrench"/></svg><span>Synthesize repair</span>
+          </button>
+          <button id="btn-issue-unified-cert" class="btn btn-secondary" data-cap="governance.certify">
+            <svg class="i i-sm"><use href="#i-seal"/></svg><span>Issue certificate</span>
+          </button>
+          <span class="action-bar-spacer"></span>
+          <button id="btn-export-audit-trail" class="btn btn-ghost">
+            <svg class="i i-sm"><use href="#i-export"/></svg><span>Export audit</span>
+          </button>
+          <button id="btn-toggle-safemode-os" class="btn btn-danger-soft" data-cap="governance.safemode">
+            <svg class="i i-sm"><use href="#i-stop"/></svg><span id="btn-safemode-text">Safe mode</span>
+          </button>
+        </div>
+
+        <div class="kpi-row">
+          <div class="kpi">
+            <span class="kpi-label">Project health</span>
+            <span class="kpi-value">98.4<small>/100</small></span>
+            <span class="kpi-delta up">+1.2 this week</span>
+          </div>
+          <div class="kpi">
+            <span class="kpi-label">Release gates</span>
+            <span class="kpi-value">11<small>/11</small></span>
+            <span class="kpi-delta">All passing</span>
+          </div>
+          <div class="kpi">
+            <span class="kpi-label">Mutation score</span>
+            <span class="kpi-value">100<small>%</small></span>
+            <span class="kpi-delta">12 of 12 mutants killed</span>
+          </div>
+          <div class="kpi">
+            <span class="kpi-label">Residual risk</span>
+            <span class="kpi-value">0.02</span>
+            <span class="kpi-delta up">Below the 0.05 threshold</span>
+          </div>
+        </div>
+
+        <section class="card pipeline-card">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Verification pipeline</h2>
+              <p class="card-sub" id="track-active-phase">Idle — waiting for a change or goal trigger</p>
+            </div>
+            <span class="tag tag-neutral">12 phases</span>
+          </div>
+          <ol class="pipeline">
+            <li class="done" id="step-observe"><span class="pl-dot"></span><span class="pl-label">Observe</span></li>
+            <li class="done" id="step-state"><span class="pl-dot"></span><span class="pl-label">Snapshot</span></li>
+            <li class="done" id="step-impact"><span class="pl-dot"></span><span class="pl-label">Impact</span></li>
+            <li class="done" id="step-obligations"><span class="pl-dot"></span><span class="pl-label">Obligations</span></li>
+            <li class="done" id="step-plan"><span class="pl-dot"></span><span class="pl-label">Plan</span></li>
+            <li class="done" id="step-verify"><span class="pl-dot"></span><span class="pl-label">Verify</span></li>
+            <li class="done" id="step-diagnose"><span class="pl-dot"></span><span class="pl-label">Diagnose</span></li>
+            <li class="done" id="step-repair"><span class="pl-dot"></span><span class="pl-label">Repair</span></li>
+            <li class="done" id="step-reverify"><span class="pl-dot"></span><span class="pl-label">Re-verify</span></li>
+            <li class="done" id="step-govern"><span class="pl-dot"></span><span class="pl-label">Govern</span></li>
+            <li class="done" id="step-certify"><span class="pl-dot"></span><span class="pl-label">Certify</span></li>
+            <li class="done" id="step-commit"><span class="pl-dot"></span><span class="pl-label">Commit</span></li>
+          </ol>
+        </section>
+
+        <div class="dashboard-grid">
+          <section class="card">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Release gates</h2>
+                <p class="card-sub">Every gate must pass before a release is certified.</p>
+              </div>
+              <span class="tag tag-success"><svg class="i i-xs"><use href="#i-check"/></svg>11 passing</span>
+            </div>
+            <ul class="gate-list" id="os-gates-container">
+              <li><span class="gate-check"><svg class="i i-xs"><use href="#i-check"/></svg></span><div><strong>Functional safety</strong><span>Null safety, division by zero, bounds</span></div><em>100%</em></li>
+              <li><span class="gate-check"><svg class="i i-xs"><use href="#i-check"/></svg></span><div><strong>Security &amp; threat model</strong><span>Taint tracking, input sanitisation</span></div><em>Pass</em></li>
+              <li><span class="gate-check"><svg class="i i-xs"><use href="#i-check"/></svg></span><div><strong>Concurrency</strong><span>Acyclic lock order, no data races</span></div><em>0 races</em></li>
+              <li><span class="gate-check"><svg class="i i-xs"><use href="#i-check"/></svg></span><div><strong>Performance budget</strong><span>Latency under 50 ms, memory in quota</span></div><em>O(n)</em></li>
+              <li><span class="gate-check"><svg class="i i-xs"><use href="#i-check"/></svg></span><div><strong>Architecture</strong><span>Boundaries respected, no import cycles</span></div><em>100%</em></li>
+              <li><span class="gate-check"><svg class="i i-xs"><use href="#i-check"/></svg></span><div><strong>Mutation adequacy</strong><span>Synthetic mutants killed across AST</span></div><em>12/12</em></li>
+              <li><span class="gate-check"><svg class="i i-xs"><use href="#i-check"/></svg></span><div><strong>Probabilistic confidence</strong><span>Empirical stability (not a proof)</span></div><em>0.99</em></li>
+              <li><span class="gate-check"><svg class="i i-xs"><use href="#i-check"/></svg></span><div><strong>Semantic stability</strong><span>API contracts and equivalence preserved</span></div><em>Stable</em></li>
+              <li><span class="gate-check"><svg class="i i-xs"><use href="#i-check"/></svg></span><div><strong>Specification conformance</strong><span>Temporal and behavioural specs hold</span></div><em>Pass</em></li>
+              <li><span class="gate-check"><svg class="i i-xs"><use href="#i-check"/></svg></span><div><strong>Evidence freshness</strong><span>No stale cache, obligations current</span></div><em>100%</em></li>
+              <li><span class="gate-check"><svg class="i i-xs"><use href="#i-check"/></svg></span><div><strong>Transactional rollback</strong><span>Checkpoints replay deterministically</span></div><em>Verified</em></li>
+            </ul>
+
+            <div class="certificate">
+              <div class="certificate-head">
+                <span class="certificate-seal"><svg class="i"><use href="#i-seal"/></svg></span>
+                <div>
+                  <span class="certificate-title">Unified certificate</span>
+                  <span class="certificate-sub">Project-wide · stages 1–36</span>
+                </div>
+                <span class="tag tag-success" id="cert-badge-status">Valid</span>
+              </div>
+              <dl class="certificate-body">
+                <dt>Fingerprint</dt><dd class="mono" id="cert-fingerprint-text">CERT_8E1CFE17_PROVIZ_OS_S0</dd>
+                <dt>Revision</dt><dd class="mono" id="cert-rev-text">S0 · 0x9f3b…</dd>
+                <dt>Invariant</dt><dd>Empirical evidence ≠ formal proof</dd>
+              </dl>
+            </div>
+          </section>
+
+          <section class="card journal-card">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Event journal</h2>
+                <p class="card-sub">Append-only record of every decision.</p>
+              </div>
+              <div class="card-head-actions">
+                <span class="live-indicator"><span class="live-dot"></span>Live</span>
+                <button id="btn-clear-journal" class="btn btn-ghost btn-xs">Clear view</button>
+              </div>
+            </div>
+            <div class="segmented" role="tablist" aria-label="Filter events">
+              <button class="j-filter active" data-filter="all">All</button>
+              <button class="j-filter" data-filter="success">Passed</button>
+              <button class="j-filter" data-filter="warning">Warnings</button>
+              <button class="j-filter" data-filter="error">Errors</button>
+            </div>
+            <div class="event-stream-container" id="os-live-event-stream">
+              <div class="event-item info"><span class="e-time">00:00:01</span><span class="e-tag">[OS_BOOT_COMPLETE]</span><span class="e-msg">Verification engine started cleanly.</span></div>
+              <div class="event-item info"><span class="e-time">00:00:02</span><span class="e-tag">[CAPABILITIES_RESOLVED]</span><span class="e-msg">20 engines mapped across stages 1–35 with no dependency cycles.</span></div>
+              <div class="event-item success"><span class="e-time">00:00:03</span><span class="e-tag">[STATE_REVISION_S0]</span><span class="e-msg">Baseline snapshot recorded — health 100%, confidence 0.98.</span></div>
+              <div class="event-item success"><span class="e-time">00:00:04</span><span class="e-tag">[AUTONOMY_POLICY_ACTIVE]</span><span class="e-msg">Policy set to L3 auto-repair with sandboxing.</span></div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Decision engine</h2>
+                <p class="card-sub">How the next action is chosen.</p>
+              </div>
+              <span class="tag tag-info">Quotas on</span>
+            </div>
+
+            <div class="decision">
+              <div class="decision-verdict" id="os-decision-pill">
+                <span class="decision-label">Recommendation</span>
+                <strong>Accept &amp; commit</strong>
+              </div>
+              <p class="decision-formula">score = evidence × coverage × freshness × policy − risk − cost</p>
+              <dl class="metric-grid">
+                <div><dt>Evidence</dt><dd>0.96</dd></div>
+                <div><dt>Coverage</dt><dd>94%</dd></div>
+                <div><dt>Freshness</dt><dd>0.99</dd></div>
+                <div><dt>Residual risk</dt><dd class="good">0.02</dd></div>
+              </dl>
+            </div>
+
+            <h3 class="section-label">Resources</h3>
+            <div class="meters">
+              <div class="meter"><div class="meter-head"><span>CPU</span><span>18%</span></div><div class="meter-track"><span style="width:18%"></span></div></div>
+              <div class="meter"><div class="meter-head"><span>Memory</span><span>240 / 2048 MB</span></div><div class="meter-track"><span style="width:12%"></span></div></div>
+              <div class="meter"><div class="meter-head"><span>Solver calls</span><span>14 / 500</span></div><div class="meter-track"><span style="width:3%"></span></div></div>
+              <div class="meter"><div class="meter-head"><span>Workers</span><span>4 / 8</span></div><div class="meter-track"><span style="width:50%"></span></div></div>
+            </div>
+
+            <h3 class="section-label">State lineage</h3>
+            <ol class="lineage">
+              <li class="active"><span class="lineage-rev">S0</span><span>Baseline checkpoint</span><time>00:00:03</time></li>
+            </ol>
+          </section>
+        </div>
+<!--@app-footer-->
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         VISUALIZER (IDE)
+         =================================================================== -->
+    <section id="view-visualizer-3d" class="studio-viewport-panel">
+
+      <div class="viz-sidebar-left" id="viz-sidebar">
+        <div class="editor-header-bar">
+          <div class="editor-file">
+            <span class="file-tab"><svg class="i i-xs"><use href="#i-file"/></svg>main.py</span>
+            <label class="sr-only" for="question-select">Example</label>
+            <select id="question-select" class="select select-sm" title="Load an example"></select>
+          </div>
+          <div class="editor-actions">
+            <span id="runtime-status" class="runtime-chip runtime-chip--idle" title="Python runtime status">
+              <span class="runtime-chip-dot"></span><span id="runtime-status-text">Python idle</span>
+            </span>
+            <button id="btn-reset" class="icon-btn" title="Clear trace and scene" aria-label="Clear trace and scene">
+              <svg class="i i-sm"><use href="#i-reset"/></svg>
+            </button>
+            <button id="btn-run" class="btn btn-primary btn-sm" title="Run and trace (F5)">
+              <svg class="i i-xs"><use href="#i-play"/></svg><span>Run</span><kbd>F5</kbd>
+            </button>
+          </div>
+        </div>
+
+        <div id="editor-container" class="codemirror-wrapper"></div>
+
+        <div class="pane-splitter pane-splitter--row" id="splitter-editor" role="separator" aria-orientation="horizontal" aria-label="Resize editor" tabindex="0"></div>
+
+        <div class="ide-lower" id="ide-lower">
+          <div id="explanation-panel" class="explanation-box">
+            <div class="exp-badges" id="exp-badges"><span class="exp-badge exp-badge--idle">Ready</span></div>
+            <div class="exp-primary" id="exp-primary">Press <kbd>F5</kbd> to run your code and build the world.</div>
+            <div class="exp-secondary" id="exp-secondary"></div>
+          </div>
+
+          <div class="inspector-subpanel">
+            <div class="inspector-tabs-row" role="tablist">
+              <button id="tab-inspector-vars" class="insp-tab active" data-pane="vars" role="tab">Variables</button>
+              <button id="tab-inspector-stack" class="insp-tab" data-pane="stack" role="tab">Call stack</button>
+              <button id="tab-inspector-output" class="insp-tab" data-pane="output" role="tab">Output <span class="insp-count" id="output-count" hidden></span></button>
+            </div>
+            <div id="variables-container" class="inspector-content-area" data-pane="vars"></div>
+            <div id="callstack-container" class="inspector-content-area" data-pane="stack" hidden></div>
+            <pre id="output-container" class="inspector-content-area output-console" data-pane="output" hidden></pre>
+          </div>
+        </div>
+
+        <div class="playback-controls-bar" id="playback-controls">
+          <div class="pb-buttons">
+            <div class="pb-group">
+              <button id="btn-restart" class="pb-btn" title="First step (Home)" aria-label="First step"><svg class="i i-sm"><use href="#i-first"/></svg></button>
+              <button id="btn-prev" class="pb-btn" title="Step back (←)" aria-label="Step back"><svg class="i i-sm"><use href="#i-step-back"/></svg></button>
+            </div>
+            <button id="btn-play-pause" class="pb-btn pb-btn--primary" title="Play / pause (Space)"><svg class="i i-xs"><use href="#i-play"/></svg><span>Play</span></button>
+            <div class="pb-group">
+              <button id="btn-step-over" class="pb-btn" title="Step over (F10 or →)" aria-label="Step over"><svg class="i i-sm"><use href="#i-step-over"/></svg></button>
+              <button id="btn-step-into" class="pb-btn" title="Step into (F11 or ↓)" aria-label="Step into"><svg class="i i-sm"><use href="#i-step-into"/></svg></button>
+              <button id="btn-step-out" class="pb-btn" title="Step out (Shift+F11 or ↑)" aria-label="Step out"><svg class="i i-sm"><use href="#i-step-out"/></svg></button>
+              <button id="btn-continue" class="pb-btn" title="Continue to next breakpoint (F8)" aria-label="Continue"><svg class="i i-sm"><use href="#i-continue"/></svg></button>
+            </div>
+          </div>
+          <div class="pb-progress">
+            <span id="pb-counter" class="pb-counter-text">0 / 0</span>
+            <div class="pb-bar-track" id="pb-track" role="slider" tabindex="0" aria-label="Execution timeline" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0">
+              <div class="pb-bar-fill" id="pb-bar-fill"></div>
+              <div class="pb-markers" id="pb-markers"></div>
+              <div class="pb-thumb" id="pb-thumb"></div>
+            </div>
+          </div>
+          <div class="pb-speed">
+            <label for="speed-slider">Speed</label>
+            <input type="range" id="speed-slider" min="100" max="2000" value="700" step="100">
+            <span id="speed-label">0.7s</span>
+            <span class="pb-legend"><i class="lg lg-call"></i>Call<i class="lg lg-bp"></i>Breakpoint<i class="lg lg-exc"></i>Error</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="pane-splitter pane-splitter--col" id="splitter-main" role="separator" aria-orientation="vertical" aria-label="Resize editor and canvas" tabindex="0"></div>
+
+      <div class="viz-canvas-area" id="canvas-container">
+        <canvas id="app-canvas"></canvas>
+
+        <div class="canvas-hud canvas-hud--legend" aria-label="Legend">
+          <span class="legend-chip"><i class="sw sw-number"></i>Number</span>
+          <span class="legend-chip"><i class="sw sw-str"></i>Text</span>
+          <span class="legend-chip"><i class="sw sw-bool"></i>Boolean</span>
+          <span class="legend-chip"><i class="sw sw-ref"></i>Reference</span>
+          <span class="legend-chip"><i class="sw sw-obj"></i>Object</span>
+        </div>
+
+        <div class="canvas-floating-controls">
+          <button id="btn-fit-view" class="canvas-btn" title="Frame everything (F)"><svg class="i i-sm"><use href="#i-fit"/></svg>Fit</button>
+        </div>
+
+        <div class="canvas-step-chip" id="canvas-step-chip" hidden></div>
+        <div class="canvas-tooltip" id="canvas-tooltip" hidden></div>
+
+        <div class="runtime-overlay" id="runtime-overlay" hidden>
+          <div class="runtime-overlay-card">
+            <div class="spinner-ring"></div>
+            <strong id="runtime-overlay-title">Preparing Python</strong>
+            <span id="runtime-overlay-msg">Downloading the WebAssembly runtime — first run only.</span>
+          </div>
+        </div>
+
+        <div class="diagnostic-card" id="diagnostic-card" role="alert" hidden>
+          <div class="diag-head">
+            <span class="diag-icon"><svg class="i i-sm"><use href="#i-alert"/></svg></span>
+            <div class="diag-title-wrap">
+              <strong id="diag-title">Error</strong>
+              <span id="diag-location"></span>
+            </div>
+            <button class="icon-btn icon-btn-sm diag-close" id="diag-close" title="Dismiss" aria-label="Dismiss"><svg class="i i-xs"><use href="#i-x"/></svg></button>
+          </div>
+          <p class="diag-message" id="diag-message"></p>
+          <pre class="diag-trace" id="diag-trace" hidden></pre>
+          <div class="diag-actions">
+            <button class="btn btn-secondary btn-xs" id="diag-goto">Go to line</button>
+            <button class="btn btn-primary btn-xs" id="diag-retry" hidden>Retry</button>
+          </div>
+        </div>
+
+        <div class="shortcut-strip">
+          <span><kbd>F5</kbd>Run</span><span><kbd>F10</kbd>Over</span><span><kbd>F11</kbd>Into</span><span><kbd>←</kbd><kbd>→</kbd>Time travel</span><span><kbd>Space</kbd>Play</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         RELEASE GATES
+         =================================================================== -->
+    <section id="view-gates-studio" class="studio-viewport-panel">
+      <div class="page">
+        <header class="page-head">
+          <div class="page-head-text">
+            <span class="eyebrow">Release Gates</span>
+            <h1 class="page-title">Ship with <em>evidence.</em></h1>
+            <p class="page-lede">Security, performance and concurrency verifiers each sign off independently before anything reaches production.</p>
+          </div>
+        </header>
+
+        <div class="domain-grid">
+          <article class="card domain-card">
+            <div class="domain-head">
+              <span class="domain-icon tone-wine"><svg class="i"><use href="#i-lock"/></svg></span>
+              <div>
+                <h2 class="card-title">Security &amp; threat model</h2>
+                <p class="card-sub">OWASP Top 10, CWE taint propagation, adversarial invariants</p>
+              </div>
+              <span class="tag tag-success">0 findings</span>
+            </div>
+            <dl class="stat-strip">
+              <div><dt>Sinks analysed</dt><dd>42</dd></div>
+              <div><dt>Sanitiser coverage</dt><dd>100%</dd></div>
+              <div><dt>Attack surface</dt><dd class="good">A+</dd></div>
+            </dl>
+            <ul class="check-list">
+              <li><svg class="i i-xs"><use href="#i-check"/></svg>No unsanitised input reaches an execution sink.</li>
+              <li><svg class="i i-xs"><use href="#i-check"/></svg>Constant-time comparison preserved in crypto paths.</li>
+              <li><svg class="i i-xs"><use href="#i-check"/></svg>No buffer overflow or heap corruption paths.</li>
+            </ul>
+          </article>
+
+          <article class="card domain-card">
+            <div class="domain-head">
+              <span class="domain-icon tone-gold"><svg class="i"><use href="#i-gauge"/></svg></span>
+              <div>
+                <h2 class="card-title">Performance &amp; resources</h2>
+                <p class="card-sub">Asymptotic complexity, allocation budgets, latency SLAs</p>
+              </div>
+              <span class="tag tag-success">Linear</span>
+            </div>
+            <dl class="stat-strip">
+              <div><dt>Wall-clock latency</dt><dd>12.4 ms</dd></div>
+              <div><dt>Peak heap delta</dt><dd>+1.2 MB</dd></div>
+              <div><dt>Complexity</dt><dd>O(n)</dd></div>
+            </dl>
+            <ul class="check-list">
+              <li><svg class="i i-xs"><use href="#i-check"/></svg>Loop cost scales linearly with input size.</li>
+              <li><svg class="i i-xs"><use href="#i-check"/></svg>No leaks across 10,000 synthetic iterations.</li>
+              <li><svg class="i i-xs"><use href="#i-check"/></svg>Peak response 12.4 ms against a 100 ms budget.</li>
+            </ul>
+          </article>
+
+          <article class="card domain-card">
+            <div class="domain-head">
+              <span class="domain-icon tone-plum"><svg class="i"><use href="#i-branch"/></svg></span>
+              <div>
+                <h2 class="card-title">Concurrency &amp; temporal logic</h2>
+                <p class="card-sub">Deadlocks, interleavings, LTL model checking</p>
+              </div>
+              <span class="tag tag-success">0 races</span>
+            </div>
+            <dl class="stat-strip">
+              <div><dt>Interleavings</dt><dd>128</dd></div>
+              <div><dt>Lock order</dt><dd>Acyclic</dd></div>
+              <div><dt>Liveness (G F p)</dt><dd class="good">Holds</dd></div>
+            </dl>
+            <ul class="check-list">
+              <li><svg class="i i-xs"><use href="#i-check"/></svg>Strict partial order across every mutex acquisition.</li>
+              <li><svg class="i i-xs"><use href="#i-check"/></svg>All shared accesses ordered by happens-before.</li>
+              <li><svg class="i i-xs"><use href="#i-check"/></svg>Invariants hold across every explored schedule.</li>
+            </ul>
+          </article>
+        </div>
+<!--@app-footer-->
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         CONTINUOUS
+         =================================================================== -->
+    <section id="view-continuous-loop" class="studio-viewport-panel">
+      <div class="page">
+        <header class="page-head">
+          <div class="page-head-text">
+            <span class="eyebrow">Continuous</span>
+            <h1 class="page-title">Always watching, <em>quietly healing.</em></h1>
+            <p class="page-lede">Every change produces fresh proof obligations. Safe fixes are synthesised, re-verified and proposed automatically.</p>
+          </div>
+          <span class="live-indicator"><span class="live-dot"></span>Watching</span>
+        </header>
+
+        <div class="two-col">
+          <section class="card">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Recent changes</h2>
+                <p class="card-sub">Files touched and the obligations they created.</p>
+              </div>
+            </div>
+            <ul class="change-list">
+              <li>
+                <svg class="i i-sm"><use href="#i-file"/></svg>
+                <span class="mono">src/math/solver.py</span>
+                <span class="diff-add">+12</span>
+                <span class="tag tag-info">Obligations created</span>
+              </li>
+              <li>
+                <svg class="i i-sm"><use href="#i-file"/></svg>
+                <span class="mono">src/arrays/transform.py</span>
+                <span class="diff-none">0</span>
+                <span class="tag tag-neutral">Up to date</span>
+              </li>
+            </ul>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Self-healing</h2>
+                <p class="card-sub">Fixes proposed and verified without intervention.</p>
+              </div>
+              <span class="tag tag-success">1 resolved</span>
+            </div>
+            <div class="repair">
+              <div class="repair-head">
+                <span class="repair-finding"><svg class="i i-xs"><use href="#i-alert"/></svg>Possible division by zero · solver.py:24</span>
+                <span class="tag tag-success">Resolved</span>
+              </div>
+              <pre class="repair-diff"><span class="del">- result = total / count</span>
+<span class="add">+ result = total / count if count != 0 else 0.0</span></pre>
+              <p class="repair-verdict"><svg class="i i-xs"><use href="#i-check"/></svg>Proved by SMT solver · all mutants killed</p>
+            </div>
+          </section>
+        </div>
+<!--@app-footer-->
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         INSIGHTS
+         =================================================================== -->
+    <section id="view-project-intel" class="studio-viewport-panel">
+      <div class="page">
+        <header class="page-head">
+          <div class="page-head-text">
+            <span class="eyebrow">Insights</span>
+            <h1 class="page-title">The shape of <em>your project.</em></h1>
+            <p class="page-lede">Health, risk and architectural boundaries — summarised from every verification run.</p>
+          </div>
+        </header>
+
+        <div class="two-col">
+          <section class="card">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Project health</h2>
+                <p class="card-sub">Weighted across four verification domains.</p>
+              </div>
+            </div>
+            <div class="health">
+              <div class="health-ring" style="--value: 98.4">
+                <svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="52" class="hr-track"/><circle cx="60" cy="60" r="52" class="hr-value" pathLength="100"/></svg>
+                <div class="health-ring-label"><strong>98.4</strong><span>of 100</span></div>
+              </div>
+              <dl class="health-list">
+                <div><dt>Security</dt><dd>99.0%</dd></div>
+                <div><dt>Concurrency</dt><dd>100%</dd></div>
+                <div><dt>Performance</dt><dd>97.5%</dd></div>
+                <div><dt>Architecture</dt><dd>98.0%</dd></div>
+              </dl>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Architecture boundaries</h2>
+                <p class="card-sub">Structural rules enforced on every change.</p>
+              </div>
+              <span class="tag tag-success">Clean</span>
+            </div>
+            <dl class="rule-list">
+              <div><dt>Cyclic dependencies</dt><dd>None</dd></div>
+              <div><dt>Orphan specifications</dt><dd>None</dd></div>
+              <div><dt>Layering violations</dt><dd>None</dd></div>
+              <div><dt>Policy precedence</dt><dd>Safety › Security › Governance › Autonomy</dd></div>
+            </dl>
+          </section>
+        </div>
+<!--@app-footer-->
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         TEAM & ROLES (super admin)
+         =================================================================== -->
+    <section id="view-team-roles" class="studio-viewport-panel">
+      <div class="page">
+        <header class="page-head">
+          <div class="page-head-text">
+            <span class="eyebrow">Team &amp; roles</span>
+            <h1 class="page-title">Who can do <em>what.</em></h1>
+            <p class="page-lede">Roles decide which studios and controls each person sees. They are assigned in the deployment configuration and, optionally, through Firebase custom claims.</p>
+          </div>
+        </header>
+
+        <div class="two-col">
+          <section class="card">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Assigned roles</h2>
+                <p class="card-sub">Developer accounts. Everyone else has general access.</p>
+              </div>
+              <span class="tag tag-neutral" id="team-count">0 people</span>
+            </div>
+            <ul class="member-list" id="team-members"></ul>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Changing a role</h2>
+                <p class="card-sub">Two supported ways, from simplest to most robust.</p>
+              </div>
+            </div>
+            <ol class="howto">
+              <li>
+                <strong>Allowlist</strong>
+                <p>Add the Google e-mail address to <code>VITE_ADMIN_EMAILS</code> or <code>VITE_SUPERADMIN_EMAILS</code> (comma separated) in the deployment environment, then rebuild and redeploy.</p>
+              </li>
+              <li>
+                <strong>Custom claims</strong>
+                <p>With the Firebase Admin SDK, set <code>{ role: "admin" }</code> or <code>{ role: "superadmin" }</code> on the user. Claims can raise a role but never lower an allowlisted one; the user sees it after their next sign-in.</p>
+              </li>
+            </ol>
+            <p class="callout-note"><svg class="i i-sm"><use href="#i-lock"/></svg><span>Roles here control what the interface shows. Protect any server data with Firebase security rules that check the same claims.</span></p>
+          </section>
+        </div>
+
+        <section class="card">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Access matrix</h2>
+              <p class="card-sub">What each role can open and change.</p>
+            </div>
+          </div>
+          <div class="matrix-wrap">
+            <table class="matrix" id="role-matrix"></table>
+          </div>
+        </section>
+<!--@app-footer-->
+      </div>
+    </section>
+
+  </main>
+
+  <div class="command-palette-backdrop" id="command-palette" hidden>
+    <div class="command-palette" role="dialog" aria-label="Command palette">
+      <div class="command-input-row">
+        <svg class="i i-sm"><use href="#i-search"/></svg>
+        <input id="command-input" type="text" placeholder="Type a command…" autocomplete="off" spellcheck="false" />
+        <kbd>esc</kbd>
+      </div>
+      <ul id="command-list" role="listbox"></ul>
+    </div>
+  </div>
+
+  <div class="toast-region" id="toast-region" aria-live="polite"></div>
+
+  <script type="module" src="/main.js"></script>
+</body>
+</html>

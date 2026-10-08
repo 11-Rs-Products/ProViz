@@ -1,5 +1,13 @@
-import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "firebase/auth";
+/**
+ * firebase.js — Firebase Auth (Google) bootstrap. Imported lazily by src/auth/session.js
+ * so pages that never touch auth don't pay for the SDK.
+ */
+
+import { initializeApp } from 'firebase/app';
+import {
+    getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut,
+    onAuthStateChanged, setPersistence, browserLocalPersistence,
+} from 'firebase/auth';
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -7,73 +15,49 @@ const firebaseConfig = {
     projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
 };
 
-// Initialize Firebase only if config is present
-let app;
-let auth;
-let googleProvider;
+let auth = null;
+let googleProvider = null;
 
 try {
     if (firebaseConfig.apiKey) {
-        app = initializeApp(firebaseConfig);
+        const app = initializeApp(firebaseConfig);
         auth = getAuth(app);
-        
-        // Force localStorage instead of IndexedDB to avoid "Database is closing" lock errors
-        setPersistence(auth, browserLocalPersistence).catch(console.error);
-        
+        // localStorage instead of IndexedDB avoids "Database is closing" lock errors across tabs.
+        setPersistence(auth, browserLocalPersistence).catch(err => console.error('[ProViz] auth persistence', err));
         googleProvider = new GoogleAuthProvider();
+        googleProvider.setCustomParameters({ prompt: 'select_account' });
     }
 } catch (e) {
-    console.error("Firebase initialization error", e);
+    console.error('[ProViz] Firebase initialisation failed', e);
 }
 
-const ALLOWED_DOMAINS = [
-    "@ds.study.iitm.ac.in",
-    "@es.study.iitm.ac.in",
-    "@mg.study.iitm.ac.in",
-    "@ae.study.iitm.ac.in",
-    "@study.iitm.ac.in",
-    "@code.iitm.ac.in",
-    "@nptel.iitm.ac.in"
-];
-
-function isAllowedEmail(email) {
-    if (!email) return false;
-    const lowerEmail = email.toLowerCase();
-    return ALLOWED_DOMAINS.some(domain => lowerEmail.endsWith(domain));
+export function isConfigured() {
+    return Boolean(auth);
 }
 
 export async function loginWithGoogle() {
-    if (!auth) throw new Error("Firebase is not configured. Check .env variables.");
-    
+    if (!auth) throw new Error('Sign-in is not configured for this deployment.');
     try {
         await signInWithPopup(auth, googleProvider);
     } catch (error) {
+        // Popups are blocked in some browsers / embedded webviews: fall back to a full redirect.
+        if (error?.code === 'auth/popup-blocked' || error?.code === 'auth/operation-not-supported-in-this-environment') {
+            await signInWithRedirect(auth, googleProvider);
+            return;
+        }
         throw error;
     }
 }
 
+/** Subscribe to auth changes. The callback receives the Firebase user (or null). */
 export function onAuthChange(callback) {
-    if (!auth) return;
-    
-    // Listen for general auth state changes
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            if (!isAllowedEmail(user.email)) {
-                await signOut(auth);
-                callback(null, new Error(`Access denied. ${user.email} is not a valid IITM BS email.`));
-                return;
-            }
-            callback(user, null);
-        } else {
-            callback(null, null);
-        }
-    });
+    if (!auth) {
+        callback(null);
+        return () => {};
+    }
+    return onAuthStateChanged(auth, callback);
 }
 
 export async function logoutUser() {
-    if (auth) {
-        await signOut(auth);
-    }
+    if (auth) await signOut(auth);
 }
-
-export { auth };
