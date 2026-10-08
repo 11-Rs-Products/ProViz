@@ -18,12 +18,31 @@ const MAX_EVENTS = 50000;
 const MAX_DEPTH = 8;
 const MAX_ITEMS = 64;
 const MAX_STR_LEN = 120;
+const MAX_WALL_SECONDS = 8;
+const INIT_TIMEOUT_MS = 90000;
 
 export class PythonExecutor {
     constructor() {
         this.pyodide = null;
         this.isReady = false;
         this._initPromise = null;
+        this._statusListeners = [];
+        this.status = 'idle'; // 'idle' | 'loading' | 'ready' | 'error'
+    }
+
+    /**
+     * Subscribe to runtime lifecycle changes: fn({ status, message }).
+     * @param {Function} fn
+     */
+    onStatus(fn) {
+        this._statusListeners.push(fn);
+    }
+
+    _setStatus(status, message = '') {
+        this.status = status;
+        for (const fn of this._statusListeners) {
+            try { fn({ status, message }); } catch (e) { console.error('[PythonExecutor] status listener', e); }
+        }
     }
 
     /**
@@ -34,27 +53,45 @@ export class PythonExecutor {
         if (this.isReady) return;
         if (this._initPromise) return this._initPromise;
 
-        this._initPromise = this._doInit();
+        this._initPromise = this._doInit().catch(err => {
+            // Allow a later retry after a failed download / timeout.
+            this._initPromise = null;
+            this._setStatus('error', err.message);
+            throw err;
+        });
         return this._initPromise;
     }
 
     async _doInit() {
-        console.log('[PythonExecutor] Loading Pyodide...');
-        this.pyodide = await window.loadPyodide({
-            indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.25.0/full/',
+        this._setStatus('loading', 'Downloading Python runtime (Pyodide WebAssembly)…');
+        if (typeof window === 'undefined' || typeof window.loadPyodide !== 'function') {
+            throw new Error('Pyodide loader script is unavailable. Check your network connection and reload.');
+        }
+        let timer;
+        const timeout = new Promise((_, reject) => {
+            timer = setTimeout(() => reject(new Error(`Python runtime did not load within ${INIT_TIMEOUT_MS / 1000}s.`)), INIT_TIMEOUT_MS);
         });
+        try {
+            this.pyodide = await Promise.race([
+                window.loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.25.0/full/' }),
+                timeout,
+            ]);
+        } finally {
+            clearTimeout(timer);
+        }
 
-        // Install the tracer Python module
+        this._setStatus('loading', 'Installing ProViz tracer…');
         await this.pyodide.runPythonAsync(this._tracerPythonSource());
 
         this.isReady = true;
-        console.log('[PythonExecutor] Ready.');
+        this._setStatus('ready', 'Python runtime ready');
     }
 
     _tracerPythonSource() {
         return `
 import sys
 import json
+import time as _time_mod
 import traceback as _traceback_mod
 
 MAX_DEPTH = ${MAX_DEPTH}
@@ -64,12 +101,18 @@ MAX_STR_LEN = ${MAX_STR_LEN}
 # Sentinel for "no previous value"
 _MISSING = object()
 
+class ExecutionLimitExceeded(BaseException):
+    """Raised by the tracer to stop runaway programs. Derives from BaseException so a
+    user-level "except Exception" cannot swallow it and resume an infinite loop."""
+    pass
+
 # ---- Tracer class with Object Identity & Heap Reconstruction ----
 class _ProVizTracer:
     EXCLUDED_NAMES = frozenset([
         'js', 'sys', '__builtins__', '__name__', '__doc__',
         '_ProVizTracer', '_tracer_instance', '_user_code',
-        'json', '_traceback_mod', '_MISSING', 'MAX_DEPTH', 'MAX_ITEMS', 'MAX_STR_LEN',
+        'json', '_traceback_mod', '_time_mod', '_MISSING', 'MAX_DEPTH', 'MAX_ITEMS', 'MAX_STR_LEN',
+        'ExecutionLimitExceeded',
     ])
 
     def __init__(self):
@@ -80,6 +123,7 @@ class _ProVizTracer:
         self._heap = {}            # "obj_N" -> serialized HeapObject dict
         self._prev_locals = {}     # fn_name -> { var_name: structured_value }
         self._prev_heap_states = {} # "obj_N" -> serialized representation for diffing
+        self._started = _time_mod.monotonic()
 
     def _get_obj_id(self, obj):
         py_id = id(obj)
@@ -180,7 +224,11 @@ class _ProVizTracer:
         if frame.f_code.co_filename.startswith('<frozen'):
             return self.trace
         if len(self.events) >= ${MAX_EVENTS}:
-            return None   # Stop tracing
+            raise ExecutionLimitExceeded(
+                f"Stopped after ${MAX_EVENTS} trace steps — possible infinite loop or very long computation.")
+        if _time_mod.monotonic() - self._started > ${MAX_WALL_SECONDS}:
+            raise ExecutionLimitExceeded(
+                "Stopped after ${MAX_WALL_SECONDS}s of execution — possible infinite loop.")
 
         # Clean filename
         clean_file = frame.f_code.co_filename
@@ -195,7 +243,9 @@ class _ProVizTracer:
         stack = []
         f = frame
         while f is not None:
-            if f.f_code.co_name not in ('_run_user_code', '<module>_outer'):
+            f_file = f.f_code.co_filename
+            is_internal = f_file.startswith('/lib/') or f_file.startswith('<exec>') or f_file.startswith('<frozen')
+            if f.f_code.co_name not in ('_run_user_code', '<module>_outer') and not is_internal:
                 f_name = f.f_code.co_filename
                 if f_name.startswith('/home/pyodide/'): f_name = f_name[len('/home/pyodide/'):]
                 elif f_name == '<user_code>': f_name = '<entrypoint>'
@@ -299,15 +349,40 @@ def _run_user_code(code_str):
             'heap': {},
             'output': '',
         })
+    except ExecutionLimitExceeded as e:
+        sys.settrace(None)
+        last_line = _tracer_instance.events[-1]['line'] if _tracer_instance.events else None
+        return json.dumps({
+            'success': False,
+            'error': {
+                'type': 'ExecutionLimitExceeded',
+                'message': str(e),
+                'line': last_line,
+                'traceback': str(e),
+            },
+            'events': _tracer_instance.events,
+            'heap': _tracer_instance._heap,
+            'output': output_buf.getvalue(),
+        })
     except Exception as e:
         sys.settrace(None)
-        tb_str = _traceback_mod.format_exc()
+        # Keep only user frames so internal tracer plumbing never leaks into diagnostics.
+        user_tb = [f for f in _traceback_mod.extract_tb(e.__traceback__) if f.filename == '<user_code>']
+        tb_str = ''.join(['Traceback (most recent call last):\\n']
+                         + _traceback_mod.format_list(user_tb)
+                         + _traceback_mod.format_exception_only(type(e), e)).replace('<user_code>', 'main.py')
+        err_line = getattr(e, 'lineno', None)
+        tb_obj = e.__traceback__
+        while tb_obj is not None:
+            if tb_obj.tb_frame.f_code.co_filename == '<user_code>':
+                err_line = tb_obj.tb_lineno
+            tb_obj = tb_obj.tb_next
         return json.dumps({
             'success': False,
             'error': {
                 'type': type(e).__name__,
                 'message': str(e),
-                'line': getattr(e, 'lineno', None),
+                'line': err_line,
                 'traceback': tb_str,
             },
             'events': _tracer_instance.events,

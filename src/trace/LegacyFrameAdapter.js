@@ -209,7 +209,7 @@ export class LegacyFrameAdapter {
                     }
                     return `\`${operation.function}\` finished`;
                 case 'exception':
-                    return `⚠️ ${operation.exception_type}: ${operation.exception_message}`;
+                    return `${operation.exception_type}: ${operation.exception_message}`;
                 case 'variable_create':
                     return `New variable \`${operation.name}\` = ${operation.value}`;
                 case 'variable_update':

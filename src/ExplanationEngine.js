@@ -25,7 +25,7 @@ export class ExplanationEngine {
         const op = frame.operation;
 
         if (frame.event_type === 'call') {
-            badges.push('📞 Function Call');
+            badges.push('Call');
             const args = Object.entries(frame.variables || {})
                 .slice(0, 4)
                 .map(([k, v]) => `${k} = ${v.value}`)
@@ -33,33 +33,33 @@ export class ExplanationEngine {
             primary = `Entering function \`${frame.current_function}(${args})\``;
             secondary = `Stack depth: ${frame.stack_depth}`;
         } else if (frame.event_type === 'return') {
-            badges.push('↩️ Return');
+            badges.push('Return');
             primary = frame.return_value && frame.return_value !== 'None'
                 ? `\`${frame.current_function}\` returns ${frame.return_value}`
                 : `\`${frame.current_function}\` finished`;
         } else if (frame.event_type === 'exception') {
-            badges.push('⚠️ Error');
+            badges.push('Error');
             primary = `${frame.exception?.type}: ${frame.exception?.message}`;
             secondary = 'An exception was raised. Check your code.';
         } else if (op) {
             switch (op.type) {
                 case 'variable_create':
-                    badges.push('✨ New Variable');
+                    badges.push('New variable');
                     primary = `\`${op.name}\` created with value ${op.value}`;
                     break;
                 case 'variable_update':
-                    badges.push('🔄 Updated');
+                    badges.push('Updated');
                     primary = `\`${op.name}\` updated: ${op.old_value} → ${op.new_value}`;
                     secondary = this._diffExplanation(op.name, op.old_value, op.new_value);
                     break;
                 case 'multi_variable_update':
-                    badges.push('🔄 Multiple Updates');
+                    badges.push('Multiple updates');
                     primary = op.changes
                         .map(c => `\`${c.name}\`: ${c.old_value} → ${c.new_value}`)
                         .join(' | ');
                     break;
                 case 'program_end':
-                    badges.push('✅ Done');
+                    badges.push('Done');
                     primary = 'Program completed.';
                     if (op.output) secondary = `Output: ${op.output}`;
                     break;
